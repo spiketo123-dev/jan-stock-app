@@ -132,7 +132,7 @@ return String(s).replace(/[&<>"']/g,c=>({
 
 function render(){
 let q=$('search').value.toLowerCase();
-let rows=Object.entries(items).filter(([j,p)=>(j+' '+p.name).toLowerCase().includes(q));
+let rows=Object.entries(items).filter(([j,p])=>(j+' '+p.name).toLowerCase().includes(q));
 $('list').innerHTML=rows.length?rows.map(([j,p])=>`
 <div class="product">
 <div>
