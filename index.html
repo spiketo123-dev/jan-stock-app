@@ -1,26 +1,222 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#142033"><title>JANコード在庫管理</title>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#142033">
+<title>JANコード在庫管理</title>
 <style>
-*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f3f6fa;color:#172033;margin:0 auto;padding:16px;max-width:720px}header,.card{border-radius:16px;padding:16px;margin:12px 0}header{background:#142033;color:white}header p,.small{color:#64748b;font-size:13px;line-height:1.5}header p{color:#cbd5e1}h1{font-size:22px;margin:0 0 6px}h2{font-size:17px;margin:0 0 12px}.card{background:white;border:1px solid #dce3ec}label{display:block;font-size:13px;font-weight:bold;margin:12px 0 5px}input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}button{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:bold;background:#1769d2;color:white;margin:5px 4px 0 0}.secondary{background:#e8eef6;color:#1e293b}.danger{background:#fee2e2;color:#991b1b}.actions{display:flex;flex-wrap:wrap;gap:5px}.actions button{flex:1}#reader{width:100%;margin-top:10px}.hidden{display:none}.status{font-size:13px;color:#1769d2;margin-top:8px;min-height:18px}.product{border-top:1px solid #e2e8f0;padding:12px 0;display:flex;justify-content:space-between;gap:8px}.product strong{display:block}.product span{font-size:12px;color:#64748b}.qty{font-size:18px;font-weight:bold;white-space:nowrap}
-</style></head><body>
-<header><h1>JANコード在庫管理</h1><p>商品を登録して、在庫数と発注数を管理できます</p></header>
-<section class="card"><h2>① JANコードを読み取る</h2><div class="actions"><button id="scanBtn">カメラでスキャン</button><button class="secondary" id="stopBtn">カメラ停止</button></div><div id="reader" class="hidden"></div><p class="small">カメラが使えない場合はJANコードを直接入力できます。</p><label>JANコード</label><input id="jan" inputmode="numeric" placeholder="例：4901234567890"><button id="lookupBtn">商品を呼び出す</button><div id="status" class="status"></div></section>
-<section class="card"><h2>② 商品情報・数量</h2><label>商品名</label><input id="name" placeholder="初回だけ商品名を入力"><label>現在庫数</label><input id="stock" type="number" inputmode="numeric" min="0" value="0"><label>発注数</label><input id="order" type="number" inputmode="numeric" min="0" value="0"><div class="actions"><button id="saveBtn">登録・更新する</button><button class="secondary" id="clearBtn">入力をクリア</button></div><p class="small">同じJANコードを読み取ると登録済みの商品情報を呼び出します。数量を変更して保存してください。</p></section>
-<section class="card"><h2>③ 商品一覧</h2><input id="search" placeholder="商品名・JANコードで検索"><div id="list"></div><div class="actions"><button class="secondary" id="exportBtn">CSVを書き出す</button><button class="secondary" id="backupBtn">バックアップ保存</button></div><p class="small">データはこのiPhoneのブラウザ内に保存されます。ブラウザのデータ削除などで消えることがあるため、定期的にCSVを書き出してください。</p></section>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script>
-const $=id=>document.getElementById(id),KEY='jan-stock-app-v1';let items=JSON.parse(localStorage.getItem(KEY)||'{}'),scanner=null;
-function msg(t){$('status').textContent=t}function digits(v){return String(v||'').replace(/\\D/g,'')}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f3f6fa;color:#172033;margin:0 auto;padding:16px;max-width:720px}
+header,.card{border-radius:16px;padding:16px;margin:12px 0}
+header{background:#142033;color:white}
+header p,.small{color:#64748b;font-size:13px;line-height:1.5}
+header p{color:#cbd5e1}
+h1{font-size:22px;margin:0 0 6px}
+h2{font-size:17px;margin:0 0 12px}
+.card{background:white;border:1px solid #dce3ec}
+label{display:block;font-size:13px;font-weight:bold;margin:12px 0 5px}
+input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+button{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:bold;background:#1769d2;color:white;margin:5px 4px 0 0}
+.secondary{background:#e8eef6;color:#1e293b}
+.danger{background:#fee2e2;color:#991b1b}
+.actions{display:flex;flex-wrap:wrap;gap:5px}
+.actions button{flex:1}
+#reader{width:100%;margin-top:10px;overflow:hidden;border-radius:12px}
+#reader video{border-radius:12px}
+.hidden{display:none}
+.status{font-size:13px;color:#1769d2;margin-top:8px;min-height:18px}
+.product{border-top:1px solid #e2e8f0;padding:12px 0;display:flex;justify-content:space-between;gap:8px}
+.product strong{display:block}
+.product span{font-size:12px;color:#64748b}
+.qty{font-size:18px;font-weight:bold;white-space:nowrap}
+</style>
+</head>
+<body>
+<header>
+<h1>JANコード在庫管理</h1>
+<p>商品を登録して、在庫数と発注数を管理できます</p>
+</header>
+
+<section class="card">
+<h2>① JANコードを読み取る</h2>
+<div class="actions">
+<button id="scanBtn">カメラでスキャン</button>
+<button class="secondary" id="stopBtn">カメラ停止</button>
+</div>
+<div id="reader" class="hidden"></div>
+<p class="small">カメラが使えない場合はJANコードを直接入力できます。</p>
+<label>JANコード</label>
+<input id="jan" inputmode="numeric" placeholder="例：4901234567890">
+<button id="lookupBtn">商品を呼び出す</button>
+<div id="status" class="status"></div>
+</section>
+
+<section class="card">
+<h2>② 商品情報・数量</h2>
+<label>商品名</label>
+<input id="name" placeholder="初回だけ商品名を入力">
+<label>現在庫数</label>
+<input id="stock" type="number" inputmode="numeric" min="0" value="0">
+<label>発注数</label>
+<input id="order" type="number" inputmode="numeric" min="0" value="0">
+<div class="actions">
+<button id="saveBtn">登録・更新する</button>
+<button class="secondary" id="clearBtn">入力をクリア</button>
+</div>
+<p class="small">同じJANコードを読み取ると登録済みの商品情報を呼び出します。数量を変更して保存してください。</p>
+</section>
+
+<section class="card">
+<h2>③ 商品一覧</h2>
+<input id="search" placeholder="商品名・JANコードで検索">
+<div id="list"></div>
+<div class="actions">
+<button class="secondary" id="exportBtn">CSVを書き出す</button>
+<button class="secondary" id="backupBtn">バックアップ保存</button>
+</div>
+<p class="small">データはこのiPhoneのブラウザ内に保存されます。ブラウザのデータ削除などで消えることがあるため、定期的にCSVを書き出してください。</p>
+</section>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const KEY='jan-stock-app-v1';
+let items=JSON.parse(localStorage.getItem(KEY)||'{}'),scanner=null;
+
+function msg(t){$('status').textContent=t}
+function digits(v){return String(v||'').replace(/\D/g,'')}
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
-function fill(j){let p=items[j];$('jan').value=j;$('name').value=p?p.name:'';$('stock').value=p?p.stock:0;$('order').value=p?p.order:0;msg(p?'登録済みの商品を呼び出しました':'新しい商品です。商品名を入力してください')}
-function lookup(){let j=digits($('jan').value);if(!j)return msg('JANコードを入力してください');fill(j)}$('lookupBtn').onclick=lookup;
-$('saveBtn').onclick=()=>{let j=digits($('jan').value),n=$('name').value.trim();if(!j)return msg('JANコードを入力してください');if(!n)return msg('商品名を入力してください');items[j]={name:n,stock:Math.max(0,Number($('stock').value)||0),order:Math.max(0,Number($('order').value)||0)};saveAll();msg('保存しました')};
-$('clearBtn').onclick=()=>{['jan','name'].forEach(x=>$(x).value='');$('stock').value=0;$('order').value=0;msg('入力をクリアしました')};
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(){let q=$('search').value.toLowerCase(),rows=Object.entries(items).filter(([j,p])=>(j+' '+p.name).toLowerCase().includes(q));$('list').innerHTML=rows.length?rows.map(([j,p])=>`<div class="product"><div><strong>${esc(p.name)}</strong><span>${esc(j)}　発注数：${p.order}</span><div><button class="secondary" data-edit="${j}">編集</button><button class="danger" data-del="${j}">削除</button></div></div><div class="qty">在庫 ${p.stock}</div></div>`).join(''):'<p class="small">商品はまだ登録されていません。</p>'}
-$('list').onclick=e=>{let ed=e.target.dataset.edit,del=e.target.dataset.del;if(ed)fill(ed);if(del&&confirm('この商品を削除しますか？')){delete items[del];saveAll()}};$('search').oninput=render;
-function download(n,d,t){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([d],{type:t}));a.href=u;a.download=n;a.click();URL.revokeObjectURL(u)}
-$('exportBtn').onclick=()=>{let rows=[['JANコード','商品名','現在庫数','発注数'],...Object.entries(items).map(([j,p])=>[j,p.name,p.stock,p.order])];download('jan-stock.csv','\\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\r\\n'),'text/csv;charset=utf-8')};
-$('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify(items,null,2),'application/json');
-async function stopScan(){if(scanner){try{await scanner.stop();scanner.clear()}catch(e){}scanner=null}$('reader').classList.add('hidden')}$('stopBtn').onclick=stopScan;
-$('scanBtn').onclick=async()=>{if(!window.Html5Qrcode)return msg('スキャン機能を読み込めません。JANコードを直接入力してください');try{$('reader').classList.remove('hidden');scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:130},formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E]},decoded=>{$('jan').value=digits(decoded);stopScan();lookup()},()=>{});msg('バーコードを枠内に合わせてください')}catch(e){msg('カメラを起動できません。Safariのカメラ許可を確認するかJANコードを直接入力してください')}};render();
-</script></body></html>
+
+function fill(j){
+let p=items[j];
+$('jan').value=j;
+$('name').value=p?p.name:'';
+$('stock').value=p?p.stock:0;
+$('order').value=p?p.order:0;
+msg(p?'登録済みの商品を呼び出しました':'新しい商品です。商品名を入力してください');
+}
+
+function lookup(){
+let j=digits($('jan').value);
+if(!j)return msg('JANコードを入力してください');
+fill(j);
+}
+$('lookupBtn').onclick=lookup;
+
+$('saveBtn').onclick=()=>{
+let j=digits($('jan').value),n=$('name').value.trim();
+if(!j)return msg('JANコードを入力してください');
+if(!n)return msg('商品名を入力してください');
+items[j]={
+name:n,
+stock:Math.max(0,Number($('stock').value)||0),
+order:Math.max(0,Number($('order').value)||0)
+};
+saveAll();
+msg('保存しました');
+};
+
+$('clearBtn').onclick=()=>{
+['jan','name'].forEach(x=>$(x).value='');
+$('stock').value=0;
+$('order').value=0;
+msg('入力をクリアしました');
+};
+
+function esc(s){
+return String(s).replace(/[&<>"']/g,c=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+}
+
+function render(){
+let q=$('search').value.toLowerCase();
+let rows=Object.entries(items).filter(([j,p)=>(j+' '+p.name).toLowerCase().includes(q));
+$('list').innerHTML=rows.length?rows.map(([j,p])=>`
+<div class="product">
+<div>
+<strong>${esc(p.name)}</strong>
+<span>${esc(j)}　発注数：${p.order}</span>
+<div>
+<button class="secondary" data-edit="${j}">編集</button>
+<button class="danger" data-del="${j}">削除</button>
+</div>
+</div>
+<div class="qty">在庫 ${p.stock}</div>
+</div>`).join(''):'<p class="small">商品はまだ登録されていません。</p>';
+}
+
+$('list').onclick=e=>{
+let ed=e.target.dataset.edit,del=e.target.dataset.del;
+if(ed)fill(ed);
+if(del&&confirm('この商品を削除しますか？')){
+delete items[del];
+saveAll();
+}
+};
+$('search').oninput=render;
+
+function download(n,d,t){
+let a=document.createElement('a');
+let u=URL.createObjectURL(new Blob([d],{type:t}));
+a.href=u;
+a.download=n;
+a.click();
+URL.revokeObjectURL(u);
+}
+
+$('exportBtn').onclick=()=>{
+let rows=[
+['JANコード','商品名','現在庫数','発注数'],
+...Object.entries(items).map(([j,p])=>[j,p.name,p.stock,p.order])
+];
+download('jan-stock.csv','\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');
+};
+
+$('backupBtn').onclick=()=>{
+download('jan-stock-backup.json',JSON.stringify(items,null,2),'application/json');
+};
+
+async function stopScan(){
+if(scanner){
+try{await scanner.stop();scanner.clear()}catch(e){}
+scanner=null;
+}
+$('reader').classList.add('hidden');
+}
+$('stopBtn').onclick=stopScan;
+
+$('scanBtn').onclick=async()=>{
+if(!window.Html5Qrcode)return msg('スキャン機能を読み込めません。JANコードを直接入力してください');
+try{
+$('reader').classList.remove('hidden');
+scanner=new Html5Qrcode('reader');
+await scanner.start(
+{facingMode:'environment'},
+{
+fps:12,
+qrbox:{width:320,height:180},
+formatsToSupport:[
+Html5QrcodeSupportedFormats.EAN_13,
+Html5QrcodeSupportedFormats.EAN_8,
+Html5QrcodeSupportedFormats.UPC_A,
+Html5QrcodeSupportedFormats.UPC_E
+]
+},
+decoded=>{
+$('jan').value=digits(decoded);
+stopScan();
+lookup();
+},
+()=>{}
+);
+msg('大きくなった枠内にバーコード全体を合わせてください');
+}catch(e){
+msg('カメラを起動できません。Safariのカメラ許可を確認するかJANコードを直接入力してください');
+}
+};
+render();
+</script>
+</body>
+</html>
