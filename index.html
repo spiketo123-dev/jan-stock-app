@@ -229,7 +229,6 @@ await audioCtx.resume();
       },
       decoded=>{
        playBeep();  $('jan').value=digits(decoded);
-        stopScan();
         lookup();
       },
       ()=>{}
