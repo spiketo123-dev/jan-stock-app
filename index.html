@@ -77,7 +77,11 @@ button{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:
 </div>
 <p class="small">データはこのiPhoneのブラウザ内に保存されます。ブラウザのデータ削除などで消えることがあるため、定期的にCSVを書き出してください。</p>
 </section>
-
+<section class="card">
+  <h2>④ 倉庫向け発注一覧</h2>
+  <div id="orderList"></div>
+  <div id="orderSummary"></div>
+</section>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -85,7 +89,10 @@ const KEY='jan-stock-app-v1';
 let items=JSON.parse(localStorage.getItem(KEY)||'{}'),scanner=null,scanPaused=false;
 function msg(t){$('status').textContent=t}
 function digits(v){return String(v||'').replace(/\D/g,'')}
-function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
+function saveAll(){
+  localStorage.setItem(KEY,JSON.stringify(items));
+  renderOrder();
+}
 
 function fill(j){
 let p=items[j];
@@ -156,6 +163,25 @@ delete items[del];
 saveAll();
 }
 };
+function renderOrder(){
+  let rows=Object.entries(items)
+    .filter(([j,p])=>Number(p.order)>0)
+    .map(([j,p])=>({jan:j,name:p.name,order:Number(p.order)}));
+
+  $('orderList').innerHTML=rows.length
+    ?rows.map(p=>`
+      <div class="product">
+        <strong>${esc(p.name)}</strong>
+        <span>${esc(p.jan)}　発注数：${p.order}</span>
+      </div>
+    `).join('')
+    :'<p class="small">発注商品はありません</p>';
+
+  $('orderSummary').innerHTML=`
+    <h3>合計商品数：${rows.length}種類</h3>
+    <h3>合計発注数：${rows.reduce((s,p)=>s+p.order,0)}個</h3>
+  `;
+}
 $('search').oninput=render;
 
 function download(n,d,t){
@@ -243,6 +269,7 @@ await audioCtx.resume();
 };
 
 render();
+renderOrder();
 </script>
 </body>
 </html>
