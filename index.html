@@ -113,7 +113,9 @@ stock:Math.max(0,Number($('stock').value)||0),
 order:Math.max(0,Number($('order').value)||0)
 };
 saveAll();
-msg('保存しました');
+scanPaused=false;
+msg('保存しました！次の商品をスキャンできます');
+  
 };
 
 $('clearBtn').onclick=()=>{
