@@ -82,8 +82,7 @@ button{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:
 <script>
 const $=id=>document.getElementById(id);
 const KEY='jan-stock-app-v1';
-let items=JSON.parse(localStorage.getItem(KEY)||'{}'),scanner=null;
-
+let items=JSON.parse(localStorage.getItem(KEY)||'{}'),scanner=null,scanPaused=false;
 function msg(t){$('status').textContent=t}
 function digits(v){return String(v||'').replace(/\D/g,'')}
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
