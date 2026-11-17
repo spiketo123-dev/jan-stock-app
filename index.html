@@ -256,9 +256,12 @@ await audioCtx.resume();
         ]
       },
       decoded=>{
-       playBeep();  $('jan').value=digits(decoded);
-        lookup();
-      },
+  if(scanPaused)return;
+  scanPaused=true;
+  playBeep();
+  $('jan').value=decoded;
+  lookup();
+},
       ()=>{}
     );
 
