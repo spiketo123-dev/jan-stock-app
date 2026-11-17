@@ -69,8 +69,10 @@ function lookup(){
  const j=digits($('jan').value);$('jan').value=j;
  if(!j){status('formStatus','JANコードを入力してください');return}
  const p=items[j];
- $('name').value=p?.name||'';$('stock').value=Number(p?.stock)||0;$('order').value=Number(p?.order)||0;
- status('formStatus',p?'登録済みの商品です。内容を確認して更新できます':'未登録の商品です。商品名を入力してください');
+ $('name').value=p?.name||'';
+ $('stock').value=Number(p?.stock)||0;
+ $('order').value=0;
+ status('formStatus',p?'登録済みの商品です。今回の追加発注数を入力してください':'未登録の商品です。商品名を入力してください');
 }
 function beep(){try{const C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=1000;g.gain.value=.12;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.1);o.onended=()=>c.close()}catch(e){}}
 async function startScan(){
@@ -93,9 +95,13 @@ async function closeScan(){if(scanner&&running){try{await scanner.stop()}catch(e
 function clearForm(){$('jan').value='';$('name').value='';$('stock').value=0;$('order').value=0;status('formStatus','')}
 function saveProduct(){
  const j=digits($('jan').value),n=$('name').value.trim(),s=Number($('stock').value),o=Number($('order').value);
- if(!j)return status('formStatus','JANコードを入力してください');if(!n)return status('formStatus','商品名を入力してください');
+ if(!j)return status('formStatus','JANコードを入力してください');
+ if(!n)return status('formStatus','商品名を入力してください');
  if(!Number.isFinite(s)||s<0||!Number.isFinite(o)||o<0)return status('formStatus','在庫数と発注数は0以上で入力してください');
- items[j]={name:n,stock:Math.floor(s),order:Math.floor(o)};saveAll();status('formStatus','保存しました');
+ const oldOrder=Number(items[j]?.order)||0;
+ items[j]={name:n,stock:Math.floor(s),order:oldOrder+Math.floor(o)};
+ saveAll();
+ status('formStatus','保存しました。発注数を加算しました');
  if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}
 }
 function render(){
