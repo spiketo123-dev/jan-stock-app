@@ -187,11 +187,25 @@ $('reader').classList.add('hidden');
 }
 $('stopBtn').onclick=stopScan;
 
+let audioCtx;
 
+function playBeep(){
+  if(!audioCtx) return;
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.frequency.value=1000;
+  gain.gain.value=0.15;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.12);
+}
 $('scanBtn').onclick=async()=>{
   if(!window.Html5Qrcode)return msg('スキャン機能を読み込めません。JANコードを直接入力してください');
 
   try{
+    audioCtx=new (window.AudioContext || window.webkitAudioContext)();
+await audioCtx.resume();
     $('reader').classList.remove('hidden');
     scanner=new Html5Qrcode('reader');
 
@@ -215,7 +229,7 @@ $('scanBtn').onclick=async()=>{
         ]
       },
       decoded=>{
-        $('jan').value=digits(decoded);
+       playBeep();  $('jan').value=digits(decoded);
         stopScan();
         lookup();
       },
