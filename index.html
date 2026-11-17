@@ -187,35 +187,47 @@ $('reader').classList.add('hidden');
 }
 $('stopBtn').onclick=stopScan;
 
+
 $('scanBtn').onclick=async()=>{
-if(!window.Html5Qrcode)return msg('スキャン機能を読み込めません。JANコードを直接入力してください');
-try{
-$('reader').classList.remove('hidden');
-scanner=new Html5Qrcode('reader');
-await scanner.start(
-{facingMode:'environment'},
-{
-fps:12,
-qrbox:{width:320,height:180},
-formatsToSupport:[
-Html5QrcodeSupportedFormats.EAN_13,
-Html5QrcodeSupportedFormats.EAN_8,
-Html5QrcodeSupportedFormats.UPC_A,
-Html5QrcodeSupportedFormats.UPC_E
-]
-},
-decoded=>{
-$('jan').value=digits(decoded);
-stopScan();
-lookup();
-},
-()=>{}
-);
-msg('大きくなった枠内にバーコード全体を合わせてください');
-}catch(e){
-msg('カメラを起動できません。Safariのカメラ許可を確認するかJANコードを直接入力してください');
-}
+  if(!window.Html5Qrcode)return msg('スキャン機能を読み込めません。JANコードを直接入力してください');
+
+  try{
+    $('reader').classList.remove('hidden');
+    scanner=new Html5Qrcode('reader');
+
+    await scanner.start(
+      {facingMode:'environment'},
+      {
+        fps:10,
+        qrbox:{width:320,height:150},
+        useBarCodeDetectorIfSupported:false,
+        videoConstraints:{
+          facingMode:{ideal:'environment'},
+          width:{ideal:1920},
+          height:{ideal:1080},
+          frameRate:{ideal:30}
+        },
+        formatsToSupport:[
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
+        ]
+      },
+      decoded=>{
+        $('jan').value=digits(decoded);
+        stopScan();
+        lookup();
+      },
+      ()=>{}
+    );
+
+    msg('バーコード全体を枠内に合わせてください');
+  }catch(e){
+    msg('カメラを起動できません。Safariのカメラ許可を確認してください');
+  }
 };
+
 render();
 </script>
 </body>
