@@ -35,7 +35,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 </section>
 <section class="card">
 <h2>② 商品登録・入力</h2>
-<label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option></select>
+<label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
 <label for="jan">JANコード</label>
 <div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
 <label for="name">商品名</label><input id="name" placeholder="商品名を入力">
@@ -45,7 +45,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 </section>
 <section class="card">
 <h2>③ 商品一覧</h2>
-<label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>未設定</option></select>
+<label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>未設定</option></select>
 <label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力">
 <div id="products"></div>
 <div class="actions"><button id="csvBtn" class="secondary">商品一覧をCSV出力</button><button id="backupBtn" class="secondary">バックアップ保存</button></div>
@@ -56,7 +56,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <script>
 'use strict';
 const $=id=>document.getElementById(id), KEY='jan-stock-app-v1';
-const STORES=['パシオ鷹尾','パシオ早鈴','Aコープ末吉','Aコープ牧之原'];
+const STORES=['パシオ鷹尾','パシオ早鈴','Aコープ末吉','Aコープ牧之原','その他①','その他②','その他③'];
 const keyOf=(store,jan)=>store+'::'+jan;
 let items={},editingKey=null;
 try{
@@ -144,7 +144,7 @@ $('scanBtn').onclick=startScan;$('nextBtn').onclick=()=>{if(scanner&&running){lo
 $('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=clearForm;$('search').oninput=render;$('storeFilter').onchange=render;
 $('products').onclick=e=>{
  const ed=e.target.closest('[data-edit]'),del=e.target.closest('[data-del]');
- if(ed){const k=ed.dataset.edit,p=items[k];if(p){editingKey=k;$('store').value=STORES.includes(p.store)?p.store:STORES[0];$('jan').value=p.jan;$('name').value=p.name;$('stock').value=p.stock;$('order').value=0;status('formStatus','登録内容を編集できます。追加発注数だけ入力してください');window.scrollTo({top:0,behavior:'smooth'})}}
+ if(ed){const k=ed.dataset.edit,p=items[k];if(p){editingKey=k;if(![...$('store').options].some(opt=>opt.value===p.store)){const opt=document.createElement('option');opt.textContent=p.store;opt.value=p.store;$('store').appendChild(opt)}$('store').value=p.store;$('jan').value=p.jan;$('name').value=p.name;$('stock').value=p.stock;$('order').value=0;status('formStatus','登録内容を編集できます。追加発注数だけ入力してください');window.scrollTo({top:0,behavior:'smooth'})}}
  if(del){const k=del.dataset.del;if(confirm('この店舗の商品を削除しますか？')){delete items[k];saveAll();if(editingKey===k)clearForm()}}
 };
 $('csvBtn').onclick=()=>{const rows=[['店舗','JANコード','商品名','在庫数','累計発注数'],...Object.values(items).map(p=>[p.store,p.jan,p.name,p.stock||0,p.order||0])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('jan-stock-by-store.csv',csv,'text/csv;charset=utf-8')};
