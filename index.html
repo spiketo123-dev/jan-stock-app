@@ -96,12 +96,13 @@ function hideNameSuggestions(){$('nameSuggestions').classList.remove('show');$('
 function updateNameSuggestions(){
  const q=$('name').value.trim().toLocaleLowerCase('ja');
  if(!q){hideNameSuggestions();return}
- const names=[...new Set(Object.values(items).map(p=>String(p.name||'').trim()).filter(Boolean))];
- const starts=names.filter(n=>n.toLocaleLowerCase('ja').startsWith(q));
- const contains=names.filter(n=>!n.toLocaleLowerCase('ja').startsWith(q)&&n.toLocaleLowerCase('ja').includes(q));
+ const seen=new Set();
+ const candidates=Object.values(items).map(p=>({name:String(p.name||'').trim(),jan:String(p.jan||'')})).filter(p=>p.name&&p.jan).filter(p=>{const k=p.jan+'::'+p.name;if(seen.has(k))return false;seen.add(k);return true});
+ const starts=candidates.filter(p=>p.name.toLocaleLowerCase('ja').startsWith(q));
+ const contains=candidates.filter(p=>!p.name.toLocaleLowerCase('ja').startsWith(q)&&p.name.toLocaleLowerCase('ja').includes(q));
  const matches=[...starts,...contains].slice(0,7);
  if(!matches.length){hideNameSuggestions();return}
- $('nameSuggestions').innerHTML=matches.map(n=>`<button type="button" class="suggestion-item" data-name-suggestion="${esc(n)}">${esc(n)}</button>`).join('');
+ $('nameSuggestions').innerHTML=matches.map(p=>`<button type="button" class="suggestion-item" data-name-suggestion="${esc(p.name)}" data-jan-suggestion="${esc(p.jan)}">${esc(p.name)}<small style="display:block;color:#66717c;margin-top:3px">JAN：${esc(p.jan)}</small></button>`).join('');
  $('nameSuggestions').classList.add('show');
 }
 function lookup(){
@@ -114,7 +115,7 @@ function lookup(){
  const p=found?items[found]:null;editingKey=found;
  $('name').value=p?.name||'';$('stock').value=Number(p?.stock)||0;$('order').value=0;
  status('formStatus',p?`${p.store}の登録商品です。今回の追加発注数を入力してください`:'未登録の商品です。商品名を入力してください');
- updateNameSuggestions();
+ hideNameSuggestions();
 }
 function beep(){try{const C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=1000;g.gain.value=.12;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.1);o.onended=()=>c.close()}catch(e){}}
 async function startScan(){
@@ -159,7 +160,14 @@ function render(){
 }
 function download(name,data,type){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([data],{type}));a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $('name').addEventListener('input',updateNameSuggestions);
-$('nameSuggestions').onclick=e=>{const b=e.target.closest('[data-name-suggestion]');if(!b)return;$('name').value=b.dataset.nameSuggestion;hideNameSuggestions();$('name').focus()};
+$('nameSuggestions').onclick=e=>{
+ const b=e.target.closest('[data-name-suggestion]');if(!b)return;
+ const jan=b.dataset.janSuggestion,name=b.dataset.nameSuggestion;
+ $('name').value=name;$('jan').value=jan;hideNameSuggestions();
+ const target=keyOf($('store').value,jan),legacy=keyOf('未設定',jan);
+ if(items[target]||items[legacy]){lookup();hideNameSuggestions()}
+ else{editingKey=null;$('stock').value=0;$('order').value=0;status('formStatus','商品名とJANコードを入力しました。今回の店舗の商品として登録できます')}
+};
 $('name').addEventListener('focus',updateNameSuggestions);
 $('scanBtn').onclick=startScan;$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};
 $('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=()=>{clearForm();hideNameSuggestions()};$('search').oninput=render;$('storeFilter').onchange=render;
