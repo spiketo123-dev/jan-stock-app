@@ -43,7 +43,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
 <label for="jan">JANコード</label>
 <div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
-<label for="name">商品名</label><input id="name" placeholder="商品名を入力" autocomplete="off"><div id="nameSuggestions" class="suggestions" aria-label="商品名の候補"></div><p class="note">過去に登録した商品名が入力候補に表示されます。店舗をまたいで候補を探します。</p>
+<label for="name">商品名</label><input id="name" placeholder="商品名を入力" autocomplete="off"><div id="nameSuggestions" class="suggestions" aria-label="商品名の候補"></div><p class="note">商品マスタに保存した商品名が入力候補に表示されます。商品一覧を全消去しても候補は残ります。</p>
 <div class="grid"><div><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">今回の追加発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
 <div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div>
 <div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると、商品情報を更新し、発注数は今回の入力分を累計します。</p>
@@ -61,10 +61,10 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <section class="card"><h2>④ 倉庫向け発注一覧</h2><p class="note">全店舗の発注数をJANコードごとに合算して表示します。</p><div id="orders"></div><div id="summary" class="summary"></div><div class="actions"><button id="orderCsvBtn" class="secondary">発注一覧を保存（CSV）</button><button id="clearOrdersBtn" class="danger">発注数をすべてクリア</button></div></section>
 <script>
 'use strict';
-const $=id=>document.getElementById(id), KEY='jan-stock-app-v1';
+const $=id=>document.getElementById(id), KEY='jan-stock-app-v1', MASTER_KEY='jan-stock-product-master-v1';
 const STORES=['パシオ鷹尾','パシオ早鈴','Aコープ末吉','Aコープ牧之原','その他①','その他②','その他③'];
 const keyOf=(store,jan)=>store+'::'+jan;
-let items={},editingKey=null;
+let items={},productMaster={},editingKey=null;
 try{
  const raw=JSON.parse(localStorage.getItem(KEY)||'{}');
  if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
@@ -82,6 +82,19 @@ try{
   }
  }
 }catch(e){}
+// 商品マスタは店舗別の商品データとは別に保存する。旧データから初回だけ自動作成。
+try{
+ const savedMaster=localStorage.getItem(MASTER_KEY);
+ if(savedMaster===null){
+  for(const p of Object.values(items)){if(p.jan&&p.name)productMaster[p.jan]=p.name}
+  localStorage.setItem(MASTER_KEY,JSON.stringify(productMaster));
+ }else{
+  const parsed=JSON.parse(savedMaster);
+  if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){
+   for(const [jan,name] of Object.entries(parsed)){const code=String(jan).replace(/\D/g,'');if(code&&String(name||'').trim())productMaster[code]=String(name).trim()}
+  }
+ }
+}catch(e){}
 let scanner=null,running=false,locked=false;
 const digits=s=>String(s||'').replace(/\D/g,'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -93,12 +106,13 @@ function validJan(code){
  return (10-sum%10)%10===Number(code.slice(-1));
 }
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
+function saveMaster(){localStorage.setItem(MASTER_KEY,JSON.stringify(productMaster))}
+function updateMaster(jan,name){if(jan&&name){productMaster[jan]=name;saveMaster()}}
 function hideNameSuggestions(){$('nameSuggestions').classList.remove('show');$('nameSuggestions').innerHTML=''}
 function updateNameSuggestions(){
  const q=$('name').value.trim().toLocaleLowerCase('ja');
  if(!q){hideNameSuggestions();return}
- const seen=new Set();
- const candidates=Object.values(items).map(p=>({name:String(p.name||'').trim(),jan:String(p.jan||'')})).filter(p=>p.name&&p.jan).filter(p=>{const k=p.jan+'::'+p.name;if(seen.has(k))return false;seen.add(k);return true});
+ const candidates=Object.entries(productMaster).map(([jan,name])=>({name:String(name||'').trim(),jan:String(jan)})).filter(p=>p.name&&p.jan);
  const starts=candidates.filter(p=>p.name.toLocaleLowerCase('ja').startsWith(q));
  const contains=candidates.filter(p=>!p.name.toLocaleLowerCase('ja').startsWith(q)&&p.name.toLocaleLowerCase('ja').includes(q));
  const matches=[...starts,...contains].slice(0,7);
@@ -150,7 +164,7 @@ function saveProduct(){
  // 店舗を切り替えても、別店舗の同じJAN商品は削除しない。未設定データだけ移行する。
  if(migratingLegacy)delete items[editingKey];
  items[target]={store,jan:j,name:n,stock:s,order:oldOrder+o};editingKey=target;
- saveAll();hideNameSuggestions();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');
+ updateMaster(j,n);saveAll();hideNameSuggestions();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');
  if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}
 }
 function render(){
@@ -189,8 +203,18 @@ $('csvBtn').onclick=()=>{const rows=[['店舗','JANコード','商品名','在�
 $('orderCsvBtn').onclick=()=>{const rows=[['JANコード','商品名','店舗','店舗別発注数','JAN別全店舗合計'],...Object.values(items).filter(p=>Number(p.order)>0).map(p=>[p.jan,p.name,p.store,p.order,Object.values(items).filter(x=>x.jan===p.jan).reduce((a,x)=>a+(Number(x.order)||0),0)])];if(rows.length===1)return alert('保存する発注商品がありません');const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('warehouse-order.csv',csv,'text/csv;charset=utf-8')};
 $('clearOrdersBtn').onclick=()=>{if(!confirm('全店舗の発注数を0にします。商品名・在庫数・登録情報は残ります。よろしいですか？'))return;for(const p of Object.values(items))p.order=0;saveAll();status('formStatus','全店舗の発注数をクリアしました')};
 $('clearAllProductsBtn').onclick=()=>{const count=Object.keys(items).length;if(!count)return alert('削除する商品がありません');if(!confirm(`全店舗の登録商品${count}件を削除します。在庫数・発注数・商品情報もすべて消え、元に戻せません。先にバックアップを保存しましたか？`))return;items={};editingKey=null;clearForm();saveAll();status('formStatus','全店舗の商品をすべて削除しました')};
-$('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify(items,null,2),'application/json');
-$('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){const clean={};for(const [k,p] of Object.entries(d)){if(!p||typeof p!=='object')continue;let store=p.store,jan=p.jan;if(!store||!jan){const i=k.indexOf('::');if(i>0){store=k.slice(0,i);jan=k.slice(i+2)}else{store='未設定';jan=k}}jan=digits(jan);if(jan)clean[keyOf(store,jan)]={store,jan,name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}items=clean;editingKey=null;saveAll();status('formStatus','バックアップから復元しました')}}catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
+$('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify({version:2,items,productMaster},null,2),'application/json');
+$('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{
+ const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;
+ const sourceItems=(d.version===2&&d.items&&typeof d.items==='object')?d.items:d;
+ if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){
+  const clean={};for(const [k,p] of Object.entries(sourceItems)){if(!p||typeof p!=='object')continue;let store=p.store,jan=p.jan;if(!store||!jan){const i=k.indexOf('::');if(i>0){store=k.slice(0,i);jan=k.slice(i+2)}else{store='未設定';jan=k}}jan=digits(jan);if(jan)clean[keyOf(store,jan)]={store,jan,name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}
+  items=clean;
+  if(d.version===2&&d.productMaster&&typeof d.productMaster==='object'&&!Array.isArray(d.productMaster)){for(const [jan,name] of Object.entries(d.productMaster)){const code=digits(jan);if(code&&String(name||'').trim())productMaster[code]=String(name).trim()}}
+  for(const p of Object.values(items)){if(p.jan&&p.name)productMaster[p.jan]=p.name}
+  saveMaster();editingKey=null;saveAll();status('formStatus','バックアップから復元しました（商品マスタも引き継ぎました）')
+ }
+ }catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
 render();
 if ('serviceWorker' in navigator) {
  window.addEventListener('load', () => {
