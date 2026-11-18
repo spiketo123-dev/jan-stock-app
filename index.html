@@ -143,8 +143,11 @@ function saveProduct(){
  if(!validJan(j))return status('formStatus','正しい8桁または13桁のJANコードを入力してください');
  if(!n)return status('formStatus','商品名を入力してください');
  if(!Number.isFinite(s)||s<0||!Number.isFinite(o)||o<0||!Number.isInteger(s)||!Number.isInteger(o))return status('formStatus','在庫数と発注数は0以上の整数で入力してください');
- const target=keyOf(store,j),old=editingKey&&items[editingKey]?items[editingKey]:items[target],oldOrder=Number(items[target]?.order??old?.order)||0;
- if(editingKey&&editingKey!==target)delete items[editingKey];
+ const target=keyOf(store,j),source=editingKey&&items[editingKey]?items[editingKey]:null;
+ const migratingLegacy=!!(source&&editingKey===keyOf('未設定',j)&&!items[target]);
+ const oldOrder=Number(items[target]?.order??(migratingLegacy?source.order:0))||0;
+ // 店舗を切り替えても、別店舗の同じJAN商品は削除しない。未設定データだけ移行する。
+ if(migratingLegacy)delete items[editingKey];
  items[target]={store,jan:j,name:n,stock:s,order:oldOrder+o};editingKey=target;
  saveAll();hideNameSuggestions();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');
  if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}
