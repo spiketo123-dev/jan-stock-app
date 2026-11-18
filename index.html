@@ -25,26 +25,23 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 </head>
 <body>
 <h1>JAN在庫・発注アプリ</h1><p class="sub">商品登録・在庫管理・倉庫向け発注一覧</p>
-
 <section class="card">
 <h2>① JANコード読み取り</h2>
 <button id="scanBtn">カメラでJANをスキャン</button>
 <div id="reader" hidden></div>
-<p class="note">カメラの使用を許可してください。読み取り後は一時停止します。次の商品は「次の商品をスキャン」を押してください。</p>
+<p class="note">カメラの使用を許可してください。読み取り後は一時停止します。次の商品は「次の商品をスキャン」を押してください。8桁・13桁のJANコードのみ読み取ります。</p>
 <div class="actions"><button id="nextBtn" class="secondary" disabled>次の商品をスキャン</button><button id="closeBtn" class="secondary" disabled>カメラを閉じる</button></div>
 <div id="scanStatus" class="status"></div>
 </section>
-
 <section class="card">
 <h2>② 商品登録・入力</h2>
 <label for="jan">JANコード</label>
 <div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
 <label for="name">商品名</label><input id="name" placeholder="商品名を入力">
-<div class="grid"><div><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
+<div class="grid"><div><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">今回の追加発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
 <div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div>
-<div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると既存の商品情報を更新します。</p>
+<div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると、商品情報を更新し、発注数は今回の入力分を累計します。</p>
 </section>
-
 <section class="card">
 <h2>③ 商品一覧</h2>
 <label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力">
@@ -53,21 +50,29 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <label for="restore">バックアップから復元</label><input id="restore" type="file" accept=".json,application/json">
 <p class="note">復元すると現在の登録データはバックアップ内容に置き換わります。</p>
 </section>
-
 <section class="card"><h2>④ 倉庫向け発注一覧</h2><div id="orders"></div><div id="summary" class="summary"></div></section>
-
 <script>
 'use strict';
 const $=id=>document.getElementById(id), KEY='jan-stock-app-v1';
 let items={};try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');if(x&&typeof x==='object'&&!Array.isArray(x))items=x}catch(e){}
 let scanner=null,running=false,locked=false;
-const digits=s=>String(s||'').replace(/\\D/g,'');
+const digits=s=>String(s||'').replace(/\D/g,'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(id,s)=>$(id).textContent=s;
+function validJan(code){
+ if(!/^(?:\d{8}|\d{13})$/.test(code))return false;
+ const body=code.slice(0,-1);let sum=0;
+ for(let i=0;i<body.length;i++){
+  const weight=((body.length-1-i)%2===0)?3:1;
+  sum+=Number(body[i])*weight;
+ }
+ return (10-sum%10)%10===Number(code.slice(-1));
+}
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
 function lookup(){
  const j=digits($('jan').value);$('jan').value=j;
  if(!j){status('formStatus','JANコードを入力してください');return}
+ if(!validJan(j)){status('formStatus','JANコードが正しくありません。8桁または13桁のコードと末尾の数字を確認してください');return}
  const p=items[j];
  $('name').value=p?.name||'';
  $('stock').value=Number(p?.stock)||0;
@@ -78,28 +83,35 @@ function beep(){try{const C=window.AudioContext||window.webkitAudioContext,c=new
 async function startScan(){
  if(!window.Html5Qrcode){status('scanStatus','スキャン機能を読み込めません。JANを直接入力してください');return}
  $('reader').hidden=false;
- if(!scanner)scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E]});
+ if(!scanner)scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8]});
  try{
   if(running){locked=false;scanner.resume()}
   else{
-   await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:300,height:130},videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},text=>{
-    if(locked)return;const code=digits(text);if(!code)return;locked=true;beep();$('jan').value=code;lookup();try{scanner.pause(true)}catch(e){}
+   await scanner.start({facingMode:'environment'},{fps:15,qrbox:{width:340,height:180},videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},text=>{
+    if(locked)return;
+    const code=digits(text);
+    if(!code)return;
+    if(!validJan(code)){
+     status('scanStatus','JANコードとして確認できませんでした。バーコード全体を枠に合わせてください');
+     return;
+    }
+    locked=true;beep();$('jan').value=code;lookup();try{scanner.pause(true)}catch(e){}
     $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','読み取りました：'+code+' ／ 商品情報を確認してください');
    },()=>{});
    running=true;locked=false;
   }
-  $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','カメラ起動中。JANコードをかざしてください');
+  $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','カメラ起動中。JANコードを枠に合わせてください');
  }catch(e){status('scanStatus','カメラを起動できません。カメラの許可とHTTPS接続を確認してください');$('reader').hidden=true}
 }
 async function closeScan(){if(scanner&&running){try{await scanner.stop()}catch(e){}running=false}locked=false;$('reader').hidden=true;$('nextBtn').disabled=true;$('closeBtn').disabled=true;status('scanStatus','カメラを閉じました')}
 function clearForm(){$('jan').value='';$('name').value='';$('stock').value=0;$('order').value=0;status('formStatus','')}
 function saveProduct(){
  const j=digits($('jan').value),n=$('name').value.trim(),s=Number($('stock').value),o=Number($('order').value);
- if(!j)return status('formStatus','JANコードを入力してください');
+ if(!validJan(j))return status('formStatus','正しい8桁または13桁のJANコードを入力してください');
  if(!n)return status('formStatus','商品名を入力してください');
- if(!Number.isFinite(s)||s<0||!Number.isFinite(o)||o<0)return status('formStatus','在庫数と発注数は0以上で入力してください');
+ if(!Number.isFinite(s)||s<0||!Number.isFinite(o)||o<0||!Number.isInteger(s)||!Number.isInteger(o))return status('formStatus','在庫数と発注数は0以上の整数で入力してください');
  const oldOrder=Number(items[j]?.order)||0;
- items[j]={name:n,stock:Math.floor(s),order:oldOrder+Math.floor(o)};
+ items[j]={name:n,stock:s,order:oldOrder+o};
  saveAll();
  status('formStatus','保存しました。発注数を加算しました');
  if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}
@@ -120,7 +132,7 @@ $('products').onclick=e=>{
  if(ed){$('jan').value=ed.dataset.edit;lookup();window.scrollTo({top:0,behavior:'smooth'})}
  if(del){const j=del.dataset.del;if(confirm('この商品を削除しますか？')){delete items[j];saveAll();if($('jan').value===j)clearForm()}}
 };
-$('csvBtn').onclick=()=>{const rows=[['JANコード','商品名','在庫数','発注数'],...Object.entries(items).map(([j,p])=>[j,p.name,p.stock||0,p.order||0])];const csv='\\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\\r\\n');download('jan-stock.csv',csv,'text/csv;charset=utf-8')};
+$('csvBtn').onclick=()=>{const rows=[['JANコード','商品名','在庫数','発注数'],...Object.entries(items).map(([j,p])=>[j,p.name,p.stock||0,p.order||0])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('jan-stock.csv',csv,'text/csv;charset=utf-8')};
 $('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify(items,null,2),'application/json');
 $('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){const clean={};for(const [j,p] of Object.entries(d)){const k=digits(j);if(k&&p&&typeof p==='object')clean[k]={name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}items=clean;saveAll();status('formStatus','バックアップから復元しました')}}catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
 render();
