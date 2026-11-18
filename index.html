@@ -54,6 +54,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力">
 <div id="products"></div>
 <div class="actions"><button id="csvBtn" class="secondary">商品一覧をCSV出力</button><button id="backupBtn" class="secondary">バックアップ保存</button></div>
+<div class="actions"><button id="clearAllProductsBtn" class="danger">全商品をクリア</button></div>
 <label for="restore">バックアップから復元</label><input id="restore" type="file" accept=".json,application/json">
 <p class="note">復元すると現在の登録データはバックアップ内容に置き換わります。</p>
 </section>
@@ -187,6 +188,7 @@ $('products').onclick=e=>{
 $('csvBtn').onclick=()=>{const rows=[['店舗','JANコード','商品名','在庫数','累計発注数'],...Object.values(items).map(p=>[p.store,p.jan,p.name,p.stock||0,p.order||0])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('jan-stock-by-store.csv',csv,'text/csv;charset=utf-8')};
 $('orderCsvBtn').onclick=()=>{const rows=[['JANコード','商品名','店舗','店舗別発注数','JAN別全店舗合計'],...Object.values(items).filter(p=>Number(p.order)>0).map(p=>[p.jan,p.name,p.store,p.order,Object.values(items).filter(x=>x.jan===p.jan).reduce((a,x)=>a+(Number(x.order)||0),0)])];if(rows.length===1)return alert('保存する発注商品がありません');const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('warehouse-order.csv',csv,'text/csv;charset=utf-8')};
 $('clearOrdersBtn').onclick=()=>{if(!confirm('全店舗の発注数を0にします。商品名・在庫数・登録情報は残ります。よろしいですか？'))return;for(const p of Object.values(items))p.order=0;saveAll();status('formStatus','全店舗の発注数をクリアしました')};
+$('clearAllProductsBtn').onclick=()=>{const count=Object.keys(items).length;if(!count)return alert('削除する商品がありません');if(!confirm(`全店舗の登録商品${count}件を削除します。在庫数・発注数・商品情報もすべて消え、元に戻せません。先にバックアップを保存しましたか？`))return;items={};editingKey=null;clearForm();saveAll();status('formStatus','全店舗の商品をすべて削除しました')};
 $('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify(items,null,2),'application/json');
 $('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){const clean={};for(const [k,p] of Object.entries(d)){if(!p||typeof p!=='object')continue;let store=p.store,jan=p.jan;if(!store||!jan){const i=k.indexOf('::');if(i>0){store=k.slice(0,i);jan=k.slice(i+2)}else{store='未設定';jan=k}}jan=digits(jan);if(jan)clean[keyOf(store,jan)]={store,jan,name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}items=clean;editingKey=null;saveAll();status('formStatus','バックアップから復元しました')}}catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
 render();
