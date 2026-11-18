@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f4f6f8">
+<meta name="theme-color" content="#1769aa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="JAN発注アプリ">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <title>JAN在庫・発注アプリ</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -20,7 +25,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .product{border-top:1px solid #edf0f2;padding:11px 0}.product strong{display:block;font-size:15px;overflow-wrap:anywhere;margin-bottom:4px}
 .meta{font-size:13px;color:#59636e;line-height:1.6}.product-actions{display:flex;gap:7px;margin-top:7px}.product-actions button{min-height:35px;padding:6px 12px;font-size:13px}
-.summary{background:#f1f6fa;border-radius:10px;padding:11px;margin-top:12px;font-weight:700;font-size:14px}.empty{color:#7a838c;font-size:14px;padding:12px 0}select{width:100%;min-height:45px;border:1px solid #cbd2d9;border-radius:9px;padding:9px;font-size:16px;background:white}.store-tag{display:inline-block;background:#edf4fa;color:#245477;border-radius:6px;padding:2px 7px;font-size:12px;margin-bottom:5px}
+.suggestions{display:none;border:1px solid #d8e0e7;border-radius:10px;background:#fff;margin-top:5px;overflow:hidden}.suggestions.show{display:block}.suggestion-item{display:block;width:100%;text-align:left;border:0;border-radius:0;background:#fff;color:#20252b;padding:11px 12px;min-height:42px;border-bottom:1px solid #edf0f2;font-size:15px}.suggestion-item:last-child{border-bottom:0}.suggestion-item:active{background:#edf4fa}.summary{background:#f1f6fa;border-radius:10px;padding:11px;margin-top:12px;font-weight:700;font-size:14px}.empty{color:#7a838c;font-size:14px;padding:12px 0}select{width:100%;min-height:45px;border:1px solid #cbd2d9;border-radius:9px;padding:9px;font-size:16px;background:white}.store-tag{display:inline-block;background:#edf4fa;color:#245477;border-radius:6px;padding:2px 7px;font-size:12px;margin-bottom:5px}
 </style>
 </head>
 <body>
@@ -38,7 +43,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
 <label for="jan">JANコード</label>
 <div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
-<label for="name">商品名</label><input id="name" placeholder="商品名を入力">
+<label for="name">商品名</label><input id="name" placeholder="商品名を入力" autocomplete="off"><div id="nameSuggestions" class="suggestions" aria-label="商品名の候補"></div><p class="note">過去に登録した商品名が入力候補に表示されます。店舗をまたいで候補を探します。</p>
 <div class="grid"><div><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">今回の追加発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
 <div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div>
 <div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると、商品情報を更新し、発注数は今回の入力分を累計します。</p>
@@ -87,6 +92,18 @@ function validJan(code){
  return (10-sum%10)%10===Number(code.slice(-1));
 }
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
+function hideNameSuggestions(){$('nameSuggestions').classList.remove('show');$('nameSuggestions').innerHTML=''}
+function updateNameSuggestions(){
+ const q=$('name').value.trim().toLocaleLowerCase('ja');
+ if(!q){hideNameSuggestions();return}
+ const names=[...new Set(Object.values(items).map(p=>String(p.name||'').trim()).filter(Boolean))];
+ const starts=names.filter(n=>n.toLocaleLowerCase('ja').startsWith(q));
+ const contains=names.filter(n=>!n.toLocaleLowerCase('ja').startsWith(q)&&n.toLocaleLowerCase('ja').includes(q));
+ const matches=[...starts,...contains].slice(0,7);
+ if(!matches.length){hideNameSuggestions();return}
+ $('nameSuggestions').innerHTML=matches.map(n=>`<button type="button" class="suggestion-item" data-name-suggestion="${esc(n)}">${esc(n)}</button>`).join('');
+ $('nameSuggestions').classList.add('show');
+}
 function lookup(){
  const j=digits($('jan').value);$('jan').value=j;
  if(!j){status('formStatus','JANコードを入力してください');return}
@@ -97,6 +114,7 @@ function lookup(){
  const p=found?items[found]:null;editingKey=found;
  $('name').value=p?.name||'';$('stock').value=Number(p?.stock)||0;$('order').value=0;
  status('formStatus',p?`${p.store}の登録商品です。今回の追加発注数を入力してください`:'未登録の商品です。商品名を入力してください');
+ updateNameSuggestions();
 }
 function beep(){try{const C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=1000;g.gain.value=.12;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.1);o.onended=()=>c.close()}catch(e){}}
 async function startScan(){
@@ -127,7 +145,7 @@ function saveProduct(){
  const target=keyOf(store,j),old=editingKey&&items[editingKey]?items[editingKey]:items[target],oldOrder=Number(items[target]?.order??old?.order)||0;
  if(editingKey&&editingKey!==target)delete items[editingKey];
  items[target]={store,jan:j,name:n,stock:s,order:oldOrder+o};editingKey=target;
- saveAll();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');
+ saveAll();hideNameSuggestions();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');
  if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}
 }
 function render(){
@@ -140,8 +158,11 @@ function render(){
  $('summary').textContent=`合計商品数：${ord.length}種類 ／ 全店舗合計発注数：${ord.reduce((a,p)=>a+p.total,0)}個`;
 }
 function download(name,data,type){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([data],{type}));a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+$('name').addEventListener('input',updateNameSuggestions);
+$('nameSuggestions').onclick=e=>{const b=e.target.closest('[data-name-suggestion]');if(!b)return;$('name').value=b.dataset.nameSuggestion;hideNameSuggestions();$('name').focus()};
+$('name').addEventListener('focus',updateNameSuggestions);
 $('scanBtn').onclick=startScan;$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};
-$('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=clearForm;$('search').oninput=render;$('storeFilter').onchange=render;
+$('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=()=>{clearForm();hideNameSuggestions()};$('search').oninput=render;$('storeFilter').onchange=render;
 $('products').onclick=e=>{
  const ed=e.target.closest('[data-edit]'),del=e.target.closest('[data-del]');
  if(ed){const k=ed.dataset.edit,p=items[k];if(p){editingKey=k;if(![...$('store').options].some(opt=>opt.value===p.store)){const opt=document.createElement('option');opt.textContent=p.store;opt.value=p.store;$('store').appendChild(opt)}$('store').value=p.store;$('jan').value=p.jan;$('name').value=p.name;$('stock').value=p.stock;$('order').value=0;status('formStatus','登録内容を編集できます。追加発注数だけ入力してください');window.scrollTo({top:0,behavior:'smooth'})}}
@@ -153,5 +174,10 @@ $('clearOrdersBtn').onclick=()=>{if(!confirm('全店舗の発注数を0にしま
 $('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify(items,null,2),'application/json');
 $('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){const clean={};for(const [k,p] of Object.entries(d)){if(!p||typeof p!=='object')continue;let store=p.store,jan=p.jan;if(!store||!jan){const i=k.indexOf('::');if(i>0){store=k.slice(0,i);jan=k.slice(i+2)}else{store='未設定';jan=k}}jan=digits(jan);if(jan)clean[keyOf(store,jan)]={store,jan,name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}items=clean;editingKey=null;saveAll();status('formStatus','バックアップから復元しました')}}catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
 render();
+if ('serviceWorker' in navigator) {
+ window.addEventListener('load', () => {
+  navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('PWA登録エラー:', err));
+ });
+}
 </script>
 </body></html>
