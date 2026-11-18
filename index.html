@@ -172,6 +172,11 @@ $('nameSuggestions').onclick=e=>{
  else{editingKey=null;$('stock').value=0;$('order').value=0;status('formStatus','商品名とJANコードを入力しました。今回の店舗の商品として登録できます')}
 };
 $('name').addEventListener('focus',updateNameSuggestions);
+$('store').addEventListener('change',()=>{
+ const source=editingKey&&items[editingKey]?items[editingKey]:null;
+ // 別店舗へ切り替えたら、元店舗の商品を編集し続けない。未設定データの移行だけは維持する。
+ if(source&&source.store!=='未設定'&&source.store!==$('store').value){editingKey=null;status('formStatus','登録先店舗を変更しました。元の店舗の商品は残し、選択中の店舗に登録します。');}
+});
 $('scanBtn').onclick=startScan;$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};
 $('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=()=>{clearForm();hideNameSuggestions()};$('search').oninput=render;$('storeFilter').onchange=render;
 $('products').onclick=e=>{
