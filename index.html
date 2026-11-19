@@ -44,14 +44,14 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <label for="masterSearch">登録済みマスターを検索</label><input id="masterSearch" placeholder="商品名・JANコードで検索"><details class="fold-list"><summary>登録済みマスター一覧（<span id="masterCount">0</span>件）を表示</summary><div class="fold-list-content" id="masterList"></div></details>
 </section>
 <section class="card">
-<h2>② 商品登録・入力</h2><label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
+<h2>② 商品登録・入力</h2><label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>自販機在庫</option></select>
 <label for="jan">JANコード</label><div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
 <label for="name">商品名</label><input id="name" placeholder="商品名を入力" autocomplete="off"><div id="nameSuggestions" class="suggestions" aria-label="商品名の候補"></div><p class="note">商品マスタに保存した商品名が入力候補に表示されます。商品一覧を全消去しても候補は残ります。</p>
 <div class="grid" id="stockGrid"><div id="stockFieldWrap"><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">今回の追加発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
 <div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div><div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると、商品情報を更新し、発注数は今回の入力分を累計します。</p>
 </section>
 <section class="card">
-<h2>③ 商品一覧</h2><label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>未設定</option></select>
+<h2>③ 商品一覧</h2><label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>自販機在庫</option><option>未設定</option></select>
 <label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力"><details class="fold-list"><summary>商品一覧（<span id="productCount">0</span>件）を表示</summary><div class="fold-list-content" id="products"></div></details>
 <div class="actions"><button id="csvBtn" class="secondary">商品一覧をCSV出力</button><button id="backupBtn" class="secondary">バックアップ保存</button></div><div class="actions"><button id="clearAllProductsBtn" class="danger">全商品をクリア</button></div><label for="restore">バックアップから復元</label><input id="restore" type="file" accept=".json,application/json"><p class="note">復元すると現在の登録データはバックアップ内容に置き換わります。</p>
 </section>
@@ -59,7 +59,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <script>
 'use strict';
 const $=id=>document.getElementById(id), KEY='jan-stock-app-v1', MASTER_KEY='jan-stock-product-master-v1', INVENTORY_KEY='jan-stock-inventory-settings-v1';
-const STORES=['パシオ鷹尾','パシオ早鈴','Aコープ末吉','Aコープ牧之原','その他①','その他②','その他③'];
+const STORES=['パシオ鷹尾','パシオ早鈴','Aコープ末吉','Aコープ牧之原','その他①','その他②','その他③','自販機在庫'];
 const keyOf=(store,jan)=>store+'::'+jan;
 let items={},productMaster={},inventorySettings={},editingKey=null;
 try{const raw=JSON.parse(localStorage.getItem(KEY)||'{}');if(raw&&typeof raw==='object'&&!Array.isArray(raw)){for(const [k,v] of Object.entries(raw)){if(!v||typeof v!=='object')continue;let store=v.store,jan=v.jan;if(!store||!jan){const split=k.indexOf('::');if(split>0){store=k.slice(0,split);jan=k.slice(split+2)}else{store='未設定';jan=k}}jan=String(jan).replace(/\D/g,'');if(!jan)continue;items[keyOf(store,jan)]={store,jan,name:String(v.name||''),stock:Math.max(0,Math.floor(Number(v.stock)||0)),order:Math.max(0,Math.floor(Number(v.order)||0))}}}}catch(e){}
