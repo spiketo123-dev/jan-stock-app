@@ -20,7 +20,7 @@ input{width:100%;min-height:45px;border:1px solid #cbd2d9;border-radius:9px;padd
 button{border:0;border-radius:10px;padding:11px 14px;min-height:43px;font-size:14px;font-weight:650;background:#1769aa;color:white}
 button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b83232}button:disabled{opacity:.45}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1}
-#reader{max-width:480px;margin:12px auto;overflow:hidden;border-radius:10px}
+#reader{max-width:480px;margin:12px auto;overflow:hidden;border-radius:10px}#reader video{width:100%!important;height:auto!important;object-fit:contain}.camera-tools{max-width:480px;margin:10px auto;padding:10px;background:#f1f6fa;border-radius:10px}.camera-tools[hidden],#zoomWrap[hidden]{display:none!important}#zoomRange{min-height:32px;padding:0;accent-color:#1769aa}
 .status{font-size:13px;color:#1769aa;min-height:20px;margin-top:8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .product{border-top:1px solid #edf0f2;padding:11px 0}.product strong{display:block;font-size:15px;overflow-wrap:anywhere;margin-bottom:4px}
@@ -34,6 +34,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <h2>① JANコード読み取り</h2>
 <button id="scanBtn">カメラでJANをスキャン</button>
 <div id="reader" hidden></div>
+<div id="cameraTools" class="camera-tools" hidden><div class="actions" style="margin-top:0"><button id="torchBtn" class="secondary" hidden>ライトを点灯</button><button id="focusBtn" class="secondary" hidden>オートフォーカス</button></div><div id="zoomWrap" hidden><label for="zoomRange">カメラのズーム：<span id="zoomValue">1.0x</span></label><input id="zoomRange" type="range" min="1" max="2" step="0.1" value="1"></div><p class="note">ライト・ズーム・フォーカスはiPhoneやブラウザの対応状況によって表示されない場合があります。</p></div>
 <p class="note">カメラの使用を許可してください。読み取り後は一時停止します。次の商品は「次の商品をスキャン」を押してください。8桁・13桁のJANコードのみ読み取ります。</p>
 <div class="actions"><button id="nextBtn" class="secondary" disabled>次の商品をスキャン</button><button id="closeBtn" class="secondary" disabled>カメラを閉じる</button></div>
 <div id="scanStatus" class="status"></div>
@@ -106,7 +107,7 @@ try{
   }
  }
 }catch(e){}
-let scanner=null,running=false,locked=false,scanTarget='product';
+let scanner=null,running=false,locked=false,scanTarget='product',cameraTrack=null,torchOn=false;
 const digits=s=>String(s||'').replace(/\D/g,'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(id,s)=>$(id).textContent=s;
@@ -157,6 +158,39 @@ function lookup(){
  hideNameSuggestions();
 }
 function beep(){try{const C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=1000;g.gain.value=.12;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.1);o.onended=()=>c.close()}catch(e){}}
+function setupCameraTools(){
+ const video=$('reader').querySelector('video');
+ cameraTrack=video&&video.srcObject&&video.srcObject.getVideoTracks?video.srcObject.getVideoTracks()[0]:null;
+ torchOn=false;
+ const torch=$('torchBtn'),focus=$('focusBtn'),zoomWrap=$('zoomWrap');
+ torch.hidden=true;focus.hidden=true;zoomWrap.hidden=true;$('cameraTools').hidden=false;
+ if(!cameraTrack)return;
+ let caps={};try{caps=cameraTrack.getCapabilities?cameraTrack.getCapabilities():{}}catch(e){}
+ if(caps.torch===true){torch.hidden=false;torch.textContent='ライトを点灯'}
+ if(caps.focusMode&&Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))focus.hidden=false;
+ if(caps.zoom&&Number.isFinite(caps.zoom.min)&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min){
+  const range=$('zoomRange'),settings=cameraTrack.getSettings?cameraTrack.getSettings():{};
+  range.min=String(caps.zoom.min);range.max=String(caps.zoom.max);range.step=String(caps.zoom.step||0.1);
+  range.value=String(Math.min(caps.zoom.max,Math.max(caps.zoom.min,settings.zoom||caps.zoom.min)));
+  $('zoomValue').textContent=Number(range.value).toFixed(1)+'x';zoomWrap.hidden=false;
+ }
+}
+async function setCameraZoom(){
+ if(!cameraTrack)return;
+ const value=Number($('zoomRange').value);
+ try{await cameraTrack.applyConstraints({advanced:[{zoom:value}]});$('zoomValue').textContent=value.toFixed(1)+'x'}
+ catch(e){status('scanStatus','このカメラではズームを変更できません')}
+}
+async function toggleTorch(){
+ if(!cameraTrack)return;
+ try{torchOn=!torchOn;await cameraTrack.applyConstraints({advanced:[{torch:torchOn}]});$('torchBtn').textContent=torchOn?'ライトを消す':'ライトを点灯'}
+ catch(e){torchOn=false;status('scanStatus','このカメラではライトを操作できません')}
+}
+async function setContinuousFocus(){
+ if(!cameraTrack)return;
+ try{await cameraTrack.applyConstraints({advanced:[{focusMode:'continuous'}]});status('scanStatus','オートフォーカスを設定しました。バーコードから少し距離を取ってお試しください')}
+ catch(e){status('scanStatus','このカメラではフォーカス設定を変更できません。カメラの自動調整をご利用ください')}
+}
 async function startScan(){
  if(!window.Html5Qrcode){status('scanStatus','スキャン機能を読み込めません。JANを直接入力してください');return}
  $('reader').hidden=false;
@@ -164,7 +198,7 @@ async function startScan(){
  try{
   if(running){locked=false;scanner.resume()}
   else{
-   await scanner.start({facingMode:'environment'},{fps:15,qrbox:{width:340,height:180},videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},text=>{
+   await scanner.start({facingMode:'environment'},{fps:20,qrbox:(viewfinderWidth,viewfinderHeight)=>({width:Math.max(220,Math.min(440,Math.floor(viewfinderWidth*0.92))),height:Math.max(120,Math.min(190,Math.floor(viewfinderHeight*0.32)))}),videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},text=>{
     if(locked)return;const code=digits(text);if(!code)return;
     if(!validJan(code)){status('scanStatus','JANコードとして確認できませんでした。バーコード全体を枠に合わせてください');return}
     locked=true;beep();
@@ -176,12 +210,12 @@ async function startScan(){
     try{scanner.pause(true)}catch(e){}
     $('nextBtn').disabled=false;$('closeBtn').disabled=false;
    },()=>{});
-   running=true;locked=false;
+   running=true;locked=false;setupCameraTools();
   }
-  $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','カメラ起動中。JANコードを枠に合わせてください');
- }catch(e){status('scanStatus','カメラを起動できません。カメラの許可とHTTPS接続を確認してください');$('reader').hidden=true}
+  $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','カメラ起動中。バーコード全体を枠に合わせてください');
+ }catch(e){status('scanStatus','カメラを起動できません。カメラの許可とHTTPS接続を確認してください');$('reader').hidden=true;$('cameraTools').hidden=true}
 }
-async function closeScan(){if(scanner&&running){try{await scanner.stop()}catch(e){}running=false}locked=false;$('reader').hidden=true;$('nextBtn').disabled=true;$('closeBtn').disabled=true;status('scanStatus','カメラを閉じました')}
+async function closeScan(){if(scanner&&running){try{await scanner.stop()}catch(e){}running=false}locked=false;cameraTrack=null;$('reader').hidden=true;$('cameraTools').hidden=true;$('nextBtn').disabled=true;$('closeBtn').disabled=true;status('scanStatus','カメラを閉じました')}
 function clearForm(){editingKey=null;$('jan').value='';$('name').value='';$('stock').value=0;$('order').value=0;status('formStatus','')}
 function saveProduct(){
  const j=digits($('jan').value),store=$('store').value,n=$('name').value.trim(),s=Number($('stock').value),o=Number($('order').value);
@@ -221,7 +255,7 @@ $('masterSaveBtn').onclick=saveMasterEntry;
 $('masterClearBtn').onclick=clearMasterForm;
 $('masterSearch').oninput=renderMaster;
 $('masterJan').onchange=()=>{const j=digits($('masterJan').value);$('masterJan').value=j;if(validJan(j)&&productMaster[j])$('masterName').value=productMaster[j]};
-$('masterScanBtn').onclick=()=>{scanTarget='master';startScan()};
+$('masterScanBtn').onclick=()=>{scanTarget='master';startScan()};$('torchBtn').onclick=toggleTorch;$('focusBtn').onclick=setContinuousFocus;$('zoomRange').onchange=setCameraZoom;
 $('masterList').onclick=e=>{
  const ed=e.target.closest('[data-master-edit]'),del=e.target.closest('[data-master-del]');
  if(ed){const j=ed.dataset.masterEdit;$('masterJan').value=j;$('masterName').value=productMaster[j]||'';status('masterStatus','商品名を修正して「マスターに登録・更新」を押してください');$('masterName').focus()}
