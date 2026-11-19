@@ -24,7 +24,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 .status{font-size:13px;color:#1769aa;min-height:20px;margin-top:8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .product{border-top:1px solid #edf0f2;padding:11px 0}.product strong{display:block;font-size:15px;overflow-wrap:anywhere;margin-bottom:4px}
-.meta{font-size:13px;color:#59636e;line-height:1.6}.product-actions{display:flex;gap:7px;margin-top:7px}.product-actions button{min-height:35px;padding:6px 12px;font-size:13px}
+.meta{font-size:13px;color:#59636e;line-height:1.6}.product-actions{display:flex;gap:7px;margin-top:7px}.product-actions button{min-height:35px;padding:6px 12px;font-size:13px}.fold-list{margin-top:10px;border:1px solid #e1e6eb;border-radius:10px;background:#fff;overflow:hidden}.fold-list>summary{padding:12px;font-size:14px;font-weight:650;color:#245477;cursor:pointer;list-style:none;background:#f1f6fa}.fold-list>summary::-webkit-details-marker{display:none}.fold-list>summary::after{content:"＋";float:right;color:#1769aa}.fold-list[open]>summary::after{content:"−"}.fold-list-content{padding:0 12px 8px}
 .suggestions{display:none;border:1px solid #d8e0e7;border-radius:10px;background:#fff;margin-top:5px;overflow:hidden}.suggestions.show{display:block}.suggestion-item{display:block;width:100%;text-align:left;border:0;border-radius:0;background:#fff;color:#20252b;padding:11px 12px;min-height:42px;border-bottom:1px solid #edf0f2;font-size:15px}.suggestion-item:last-child{border-bottom:0}.suggestion-item:active{background:#edf4fa}.summary{background:#f1f6fa;border-radius:10px;padding:11px;margin-top:12px;font-weight:700;font-size:14px}.empty{color:#7a838c;font-size:14px;padding:12px 0}select{width:100%;min-height:45px;border:1px solid #cbd2d9;border-radius:9px;padding:9px;font-size:16px;background:white}.store-tag{display:inline-block;background:#edf4fa;color:#245477;border-radius:6px;padding:2px 7px;font-size:12px;margin-bottom:5px}
 </style>
 </head>
@@ -48,7 +48,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <div class="actions"><button id="masterSaveBtn">マスターに登録・更新</button><button id="masterClearBtn" class="secondary">入力をクリア</button></div>
 <div id="masterStatus" class="status"></div>
 <label for="masterSearch">登録済みマスターを検索</label><input id="masterSearch" placeholder="商品名・JANコードで検索">
-<div id="masterList"></div>
+<details class="fold-list"><summary>登録済みマスター一覧（<span id="masterCount">0</span>件）を表示</summary><div class="fold-list-content" id="masterList"></div></details>
 </section>
 <section class="card">
 <h2>② 商品登録・入力</h2>
@@ -64,13 +64,13 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <h2>③ 商品一覧</h2>
 <label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>未設定</option></select>
 <label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力">
-<div id="products"></div>
+<details class="fold-list"><summary>商品一覧（<span id="productCount">0</span>件）を表示</summary><div class="fold-list-content" id="products"></div></details>
 <div class="actions"><button id="csvBtn" class="secondary">商品一覧をCSV出力</button><button id="backupBtn" class="secondary">バックアップ保存</button></div>
 <div class="actions"><button id="clearAllProductsBtn" class="danger">全商品をクリア</button></div>
 <label for="restore">バックアップから復元</label><input id="restore" type="file" accept=".json,application/json">
 <p class="note">復元すると現在の登録データはバックアップ内容に置き換わります。</p>
 </section>
-<section class="card"><h2>④ 倉庫向け発注一覧</h2><p class="note">全店舗の発注数をJANコードごとに合算して表示します。</p><div id="orders"></div><div id="summary" class="summary"></div><div class="actions"><button id="orderCsvBtn" class="secondary">発注一覧を保存（CSV）</button><button id="clearOrdersBtn" class="danger">発注数をすべてクリア</button></div></section>
+<section class="card"><h2>④ 倉庫向け発注一覧</h2><p class="note">全店舗の発注数をJANコードごとに合算して表示します。</p><div id="summary" class="summary"></div><details class="fold-list"><summary>倉庫向け発注一覧（<span id="orderCount">0</span>種類）を表示</summary><div class="fold-list-content" id="orders"></div></details><div class="actions"><button id="orderCsvBtn" class="secondary">発注一覧を保存（CSV）</button><button id="clearOrdersBtn" class="danger">発注数をすべてクリア</button></div></section>
 <script>
 'use strict';
 const $=id=>document.getElementById(id), KEY='jan-stock-app-v1', MASTER_KEY='jan-stock-product-master-v1';
@@ -143,6 +143,8 @@ function renderMaster(){
  const q=($('masterSearch')?.value||'').trim().toLocaleLowerCase('ja');
  const list=Object.entries(productMaster).filter(([jan,name])=>jan.includes(q)||String(name).toLocaleLowerCase('ja').includes(q)).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja'));
  if(!$('masterList'))return;
+ $('masterCount').textContent=list.length;
+ if(q)$('masterList').closest('details').open=true;
  $('masterList').innerHTML=list.length?list.map(([jan,name])=>`<div class="product"><strong>${esc(name)}</strong><div class="meta">JAN：${esc(jan)}</div><div class="product-actions"><button class="secondary" data-master-edit="${esc(jan)}">編集</button><button class="danger" data-master-del="${esc(jan)}">削除</button></div></div>`).join(''):'<div class="empty">商品マスターはまだありません</div>';
 }
 function lookup(){
@@ -234,9 +236,12 @@ function saveProduct(){
 function render(){
  const q=$('search').value.trim().toLowerCase(),filter=$('storeFilter').value;
  const list=Object.entries(items).filter(([k,p])=>(filter==='すべて'||p.store===filter)&&(p.jan.includes(q)||String(p.name||'').toLowerCase().includes(q))).sort((a,b)=>a[1].store.localeCompare(b[1].store,'ja')||String(a[1].name).localeCompare(String(b[1].name),'ja'));
+ $('productCount').textContent=list.length;
+ if(q||filter!=='すべて')$('products').closest('details').open=true;
  $('products').innerHTML=list.length?list.map(([k,p])=>`<div class="product"><span class="store-tag">${esc(p.store)}</span><strong>${esc(p.name)}</strong><div class="meta">JAN：${esc(p.jan)}<br>在庫：${Number(p.stock)||0} ／ 累計発注：${Number(p.order)||0}</div><div class="product-actions"><button class="secondary" data-edit="${esc(k)}">編集</button><button class="danger" data-del="${esc(k)}">削除</button></div></div>`).join(''):'<div class="empty">登録商品はありません</div>';
  const groups={};for(const p of Object.values(items)){const qty=Math.max(0,Math.floor(Number(p.order)||0));if(!qty)continue;if(!groups[p.jan])groups[p.jan]={jan:p.jan,name:p.name||'',total:0,stores:[]};groups[p.jan].total+=qty;groups[p.jan].stores.push({store:p.store,qty})}
  const ord=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name,'ja'));
+ $('orderCount').textContent=ord.length;
  $('orders').innerHTML=ord.length?ord.map(p=>`<div class="product"><strong>${esc(p.name)}</strong><div class="meta">JAN：${esc(p.jan)}<br>${p.stores.sort((a,b)=>a.store.localeCompare(b.store,'ja')).map(x=>`${esc(x.store)}：${x.qty}個`).join('<br>')}<br><b>全店舗合計：${p.total}個</b></div></div>`).join(''):'<div class="empty">発注商品はありません</div>';
  $('summary').textContent=`合計商品数：${ord.length}種類 ／ 全店舗合計発注数：${ord.reduce((a,p)=>a+p.total,0)}個`;
 }
