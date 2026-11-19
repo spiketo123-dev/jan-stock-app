@@ -39,6 +39,17 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <div id="scanStatus" class="status"></div>
 </section>
 <section class="card">
+<h2>商品マスター登録（全店舗共通）</h2>
+<p class="note">店舗への発注登録とは別に、商品名とJANコードだけを先に登録できます。ここで登録した商品は全店舗の予測変換に表示されます。</p>
+<label for="masterJan">JANコード</label>
+<div class="actions" style="margin-top:0"><input id="masterJan" inputmode="numeric" placeholder="JANコードを入力"><button id="masterScanBtn" class="secondary">カメラで読み取る</button></div>
+<label for="masterName">商品名</label><input id="masterName" placeholder="商品名を入力">
+<div class="actions"><button id="masterSaveBtn">マスターに登録・更新</button><button id="masterClearBtn" class="secondary">入力をクリア</button></div>
+<div id="masterStatus" class="status"></div>
+<label for="masterSearch">登録済みマスターを検索</label><input id="masterSearch" placeholder="商品名・JANコードで検索">
+<div id="masterList"></div>
+</section>
+<section class="card">
 <h2>② 商品登録・入力</h2>
 <label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
 <label for="jan">JANコード</label>
@@ -95,7 +106,7 @@ try{
   }
  }
 }catch(e){}
-let scanner=null,running=false,locked=false;
+let scanner=null,running=false,locked=false,scanTarget='product';
 const digits=s=>String(s||'').replace(/\D/g,'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(id,s)=>$(id).textContent=s;
@@ -107,7 +118,7 @@ function validJan(code){
 }
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
 function saveMaster(){localStorage.setItem(MASTER_KEY,JSON.stringify(productMaster))}
-function updateMaster(jan,name){if(jan&&name){productMaster[jan]=name;saveMaster()}}
+function updateMaster(jan,name){if(jan&&name){productMaster[jan]=name;saveMaster();renderMaster()}}
 function hideNameSuggestions(){$('nameSuggestions').classList.remove('show');$('nameSuggestions').innerHTML=''}
 function updateNameSuggestions(){
  const q=$('name').value.trim().toLocaleLowerCase('ja');
@@ -119,6 +130,19 @@ function updateNameSuggestions(){
  if(!matches.length){hideNameSuggestions();return}
  $('nameSuggestions').innerHTML=matches.map(p=>`<button type="button" class="suggestion-item" data-name-suggestion="${esc(p.name)}" data-jan-suggestion="${esc(p.jan)}">${esc(p.name)}<small style="display:block;color:#66717c;margin-top:3px">JAN：${esc(p.jan)}</small></button>`).join('');
  $('nameSuggestions').classList.add('show');
+}
+function clearMasterForm(){$('masterJan').value='';$('masterName').value='';status('masterStatus','')}
+function saveMasterEntry(){
+ const j=digits($('masterJan').value),n=$('masterName').value.trim();$('masterJan').value=j;
+ if(!validJan(j))return status('masterStatus','正しい8桁または13桁のJANコードを入力してください');
+ if(!n)return status('masterStatus','商品名を入力してください');
+ updateMaster(j,n);renderMaster();status('masterStatus','商品マスターに登録しました。全店舗の予測変換で使えます');
+}
+function renderMaster(){
+ const q=($('masterSearch')?.value||'').trim().toLocaleLowerCase('ja');
+ const list=Object.entries(productMaster).filter(([jan,name])=>jan.includes(q)||String(name).toLocaleLowerCase('ja').includes(q)).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja'));
+ if(!$('masterList'))return;
+ $('masterList').innerHTML=list.length?list.map(([jan,name])=>`<div class="product"><strong>${esc(name)}</strong><div class="meta">JAN：${esc(jan)}</div><div class="product-actions"><button class="secondary" data-master-edit="${esc(jan)}">編集</button><button class="danger" data-master-del="${esc(jan)}">削除</button></div></div>`).join(''):'<div class="empty">商品マスターはまだありません</div>';
 }
 function lookup(){
  const j=digits($('jan').value);$('jan').value=j;
@@ -143,8 +167,14 @@ async function startScan(){
    await scanner.start({facingMode:'environment'},{fps:15,qrbox:{width:340,height:180},videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},text=>{
     if(locked)return;const code=digits(text);if(!code)return;
     if(!validJan(code)){status('scanStatus','JANコードとして確認できませんでした。バーコード全体を枠に合わせてください');return}
-    locked=true;beep();$('jan').value=code;lookup();try{scanner.pause(true)}catch(e){}
-    $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','読み取りました：'+code+' ／ 店舗と商品情報を確認してください');
+    locked=true;beep();
+    if(scanTarget==='master'){
+     $('masterJan').value=code;$('masterName').value=productMaster[code]||'';
+     status('masterStatus',productMaster[code]?'登録済みマスターです。商品名を確認して更新できます':'JANを読み取りました。商品名を入力してマスター登録してください');
+     $('masterName').focus();
+    }else{$('jan').value=code;lookup();status('scanStatus','読み取りました：'+code+' ／ 店舗と商品情報を確認してください')}
+    try{scanner.pause(true)}catch(e){}
+    $('nextBtn').disabled=false;$('closeBtn').disabled=false;
    },()=>{});
    running=true;locked=false;
   }
@@ -187,12 +217,22 @@ $('nameSuggestions').onclick=e=>{
  else{editingKey=null;$('stock').value=0;$('order').value=0;status('formStatus','商品名とJANコードを入力しました。今回の店舗の商品として登録できます')}
 };
 $('name').addEventListener('focus',updateNameSuggestions);
+$('masterSaveBtn').onclick=saveMasterEntry;
+$('masterClearBtn').onclick=clearMasterForm;
+$('masterSearch').oninput=renderMaster;
+$('masterJan').onchange=()=>{const j=digits($('masterJan').value);$('masterJan').value=j;if(validJan(j)&&productMaster[j])$('masterName').value=productMaster[j]};
+$('masterScanBtn').onclick=()=>{scanTarget='master';startScan()};
+$('masterList').onclick=e=>{
+ const ed=e.target.closest('[data-master-edit]'),del=e.target.closest('[data-master-del]');
+ if(ed){const j=ed.dataset.masterEdit;$('masterJan').value=j;$('masterName').value=productMaster[j]||'';status('masterStatus','商品名を修正して「マスターに登録・更新」を押してください');$('masterName').focus()}
+ if(del){const j=del.dataset.masterDel;if(confirm('この商品を商品マスターから削除しますか？店舗別の商品データは削除されません。')){delete productMaster[j];saveMaster();renderMaster();status('masterStatus','商品マスターから削除しました')}}
+};
 $('store').addEventListener('change',()=>{
  const source=editingKey&&items[editingKey]?items[editingKey]:null;
  // 別店舗へ切り替えたら、元店舗の商品を編集し続けない。未設定データの移行だけは維持する。
  if(source&&source.store!=='未設定'&&source.store!==$('store').value){editingKey=null;status('formStatus','登録先店舗を変更しました。元の店舗の商品は残し、選択中の店舗に登録します。');}
 });
-$('scanBtn').onclick=startScan;$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};
+$('scanBtn').onclick=()=>{scanTarget='product';startScan()};$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};
 $('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=()=>{clearForm();hideNameSuggestions()};$('search').oninput=render;$('storeFilter').onchange=render;
 $('products').onclick=e=>{
  const ed=e.target.closest('[data-edit]'),del=e.target.closest('[data-del]');
@@ -215,7 +255,7 @@ $('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{
   saveMaster();editingKey=null;saveAll();status('formStatus','バックアップから復元しました（商品マスタも引き継ぎました）')
  }
  }catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
-render();
+render();renderMaster();
 if ('serviceWorker' in navigator) {
  window.addEventListener('load', () => {
   navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('PWA登録エラー:', err));
