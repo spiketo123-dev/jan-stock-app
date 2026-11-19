@@ -20,285 +20,96 @@ input{width:100%;min-height:45px;border:1px solid #cbd2d9;border-radius:9px;padd
 button{border:0;border-radius:10px;padding:11px 14px;min-height:43px;font-size:14px;font-weight:650;background:#1769aa;color:white}
 button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b83232}button:disabled{opacity:.45}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1}
-#reader{max-width:480px;margin:12px auto;overflow:hidden;border-radius:10px}#reader video{width:100%!important;height:auto!important;object-fit:contain}.camera-tools{max-width:480px;margin:10px auto;padding:10px;background:#f1f6fa;border-radius:10px}.camera-tools[hidden],#zoomWrap[hidden]{display:none!important}#zoomRange{min-height:32px;padding:0;accent-color:#1769aa}
+#reader{max-width:480px;margin:12px auto;overflow:hidden;border-radius:10px}#reader video{width:100%!important;height:auto!important;object-fit:contain}.camera-tools{max-width:480px;margin:10px auto;padding:10px;background:#f1f6fa;border-radius:10px}.camera-tools[hidden],#zoomWrap[hidden],#stockFieldWrap[hidden]{display:none!important}#zoomRange{min-height:32px;padding:0;accent-color:#1769aa}
 .status{font-size:13px;color:#1769aa;min-height:20px;margin-top:8px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid.stock-off{grid-template-columns:1fr}
 .product{border-top:1px solid #edf0f2;padding:11px 0}.product strong{display:block;font-size:15px;overflow-wrap:anywhere;margin-bottom:4px}
 .meta{font-size:13px;color:#59636e;line-height:1.6}.product-actions{display:flex;gap:7px;margin-top:7px}.product-actions button{min-height:35px;padding:6px 12px;font-size:13px}.fold-list{margin-top:10px;border:1px solid #e1e6eb;border-radius:10px;background:#fff;overflow:hidden}.fold-list>summary{padding:12px;font-size:14px;font-weight:650;color:#245477;cursor:pointer;list-style:none;background:#f1f6fa}.fold-list>summary::-webkit-details-marker{display:none}.fold-list>summary::after{content:"＋";float:right;color:#1769aa}.fold-list[open]>summary::after{content:"−"}.fold-list-content{padding:0 12px 8px}
 .suggestions{display:none;border:1px solid #d8e0e7;border-radius:10px;background:#fff;margin-top:5px;overflow:hidden}.suggestions.show{display:block}.suggestion-item{display:block;width:100%;text-align:left;border:0;border-radius:0;background:#fff;color:#20252b;padding:11px 12px;min-height:42px;border-bottom:1px solid #edf0f2;font-size:15px}.suggestion-item:last-child{border-bottom:0}.suggestion-item:active{background:#edf4fa}.summary{background:#f1f6fa;border-radius:10px;padding:11px;margin-top:12px;font-weight:700;font-size:14px}.empty{color:#7a838c;font-size:14px;padding:12px 0}select{width:100%;min-height:45px;border:1px solid #cbd2d9;border-radius:9px;padding:9px;font-size:16px;background:white}.store-tag{display:inline-block;background:#edf4fa;color:#245477;border-radius:6px;padding:2px 7px;font-size:12px;margin-bottom:5px}
+.checkline{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;margin:12px 0 4px}.checkline input,.master-stock-toggle{width:20px;min-width:20px;height:20px;min-height:20px;padding:0;margin:0;accent-color:#1769aa}.master-stock-toggle{vertical-align:middle;margin-right:5px}
 </style>
 </head>
 <body>
 <h1>JAN在庫・発注アプリ</h1><p class="sub">商品登録・在庫管理・倉庫向け発注一覧</p>
 <section class="card">
-<h2>① JANコード読み取り</h2>
-<button id="scanBtn">カメラでJANをスキャン</button>
-<div id="reader" hidden></div>
+<h2>① JANコード読み取り</h2><button id="scanBtn">カメラでJANをスキャン</button><div id="reader" hidden></div>
 <div id="cameraTools" class="camera-tools" hidden><div class="actions" style="margin-top:0"><button id="torchBtn" class="secondary" hidden>ライトを点灯</button><button id="focusBtn" class="secondary" hidden>オートフォーカス</button></div><div id="zoomWrap" hidden><label for="zoomRange">カメラのズーム：<span id="zoomValue">1.0x</span></label><input id="zoomRange" type="range" min="1" max="2" step="0.1" value="1"></div><p class="note">ライト・ズーム・フォーカスはiPhoneやブラウザの対応状況によって表示されない場合があります。</p></div>
-<p class="note">カメラの使用を許可してください。読み取り後は一時停止します。次の商品は「次の商品をスキャン」を押してください。8桁・13桁のJANコードのみ読み取ります。</p>
-<div class="actions"><button id="nextBtn" class="secondary" disabled>次の商品をスキャン</button><button id="closeBtn" class="secondary" disabled>カメラを閉じる</button></div>
-<div id="scanStatus" class="status"></div>
+<p class="note">カメラの使用を許可してください。読み取り後は一時停止します。次の商品は「次の商品をスキャン」を押してください。8桁・13桁のJANコードのみ読み取ります。</p><div class="actions"><button id="nextBtn" class="secondary" disabled>次の商品をスキャン</button><button id="closeBtn" class="secondary" disabled>カメラを閉じる</button></div><div id="scanStatus" class="status"></div>
 </section>
 <section class="card">
-<h2>商品マスター登録（全店舗共通）</h2>
-<p class="note">店舗への発注登録とは別に、商品名とJANコードだけを先に登録できます。ここで登録した商品は全店舗の予測変換に表示されます。</p>
-<label for="masterJan">JANコード</label>
-<div class="actions" style="margin-top:0"><input id="masterJan" inputmode="numeric" placeholder="JANコードを入力"><button id="masterScanBtn" class="secondary">カメラで読み取る</button></div>
-<label for="masterName">商品名</label><input id="masterName" placeholder="商品名を入力">
-<div class="actions"><button id="masterSaveBtn">マスターに登録・更新</button><button id="masterClearBtn" class="secondary">入力をクリア</button></div>
-<div id="masterStatus" class="status"></div>
-<label for="masterSearch">登録済みマスターを検索</label><input id="masterSearch" placeholder="商品名・JANコードで検索">
-<details class="fold-list"><summary>登録済みマスター一覧（<span id="masterCount">0</span>件）を表示</summary><div class="fold-list-content" id="masterList"></div></details>
+<h2>商品マスター登録（全店舗共通）</h2><p class="note">店舗への発注登録とは別に、商品名とJANコードだけを先に登録できます。ここで登録した商品は全店舗の予測変換に表示されます。在庫管理する商品だけチェックを入れてください。</p>
+<label for="masterJan">JANコード</label><div class="actions" style="margin-top:0"><input id="masterJan" inputmode="numeric" placeholder="JANコードを入力"><button id="masterScanBtn" class="secondary">カメラで読み取る</button></div>
+<label for="masterName">商品名</label><input id="masterName" placeholder="商品名を入力"><label class="checkline"><input id="masterInventory" type="checkbox" checked> 在庫管理する</label>
+<div class="actions"><button id="masterSaveBtn">マスターに登録・更新</button><button id="masterClearBtn" class="secondary">入力をクリア</button></div><div id="masterStatus" class="status"></div>
+<label for="masterSearch">登録済みマスターを検索</label><input id="masterSearch" placeholder="商品名・JANコードで検索"><details class="fold-list"><summary>登録済みマスター一覧（<span id="masterCount">0</span>件）を表示</summary><div class="fold-list-content" id="masterList"></div></details>
 </section>
 <section class="card">
-<h2>② 商品登録・入力</h2>
-<label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
-<label for="jan">JANコード</label>
-<div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
+<h2>② 商品登録・入力</h2><label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option></select>
+<label for="jan">JANコード</label><div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
 <label for="name">商品名</label><input id="name" placeholder="商品名を入力" autocomplete="off"><div id="nameSuggestions" class="suggestions" aria-label="商品名の候補"></div><p class="note">商品マスタに保存した商品名が入力候補に表示されます。商品一覧を全消去しても候補は残ります。</p>
-<div class="grid"><div><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">今回の追加発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
-<div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div>
-<div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると、商品情報を更新し、発注数は今回の入力分を累計します。</p>
+<div class="grid" id="stockGrid"><div id="stockFieldWrap"><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">今回の追加発注数</label><input id="order" type="number" min="0" step="1" value="0"></div></div>
+<div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div><div id="formStatus" class="status"></div><p class="note">同じJANコードを登録すると、商品情報を更新し、発注数は今回の入力分を累計します。</p>
 </section>
 <section class="card">
-<h2>③ 商品一覧</h2>
-<label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>未設定</option></select>
-<label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力">
-<details class="fold-list"><summary>商品一覧（<span id="productCount">0</span>件）を表示</summary><div class="fold-list-content" id="products"></div></details>
-<div class="actions"><button id="csvBtn" class="secondary">商品一覧をCSV出力</button><button id="backupBtn" class="secondary">バックアップ保存</button></div>
-<div class="actions"><button id="clearAllProductsBtn" class="danger">全商品をクリア</button></div>
-<label for="restore">バックアップから復元</label><input id="restore" type="file" accept=".json,application/json">
-<p class="note">復元すると現在の登録データはバックアップ内容に置き換わります。</p>
+<h2>③ 商品一覧</h2><label for="storeFilter">表示する店舗</label><select id="storeFilter"><option value="すべて">全店舗</option><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>未設定</option></select>
+<label for="search">商品名・JANコードで検索</label><input id="search" placeholder="検索ワードを入力"><details class="fold-list"><summary>商品一覧（<span id="productCount">0</span>件）を表示</summary><div class="fold-list-content" id="products"></div></details>
+<div class="actions"><button id="csvBtn" class="secondary">商品一覧をCSV出力</button><button id="backupBtn" class="secondary">バックアップ保存</button></div><div class="actions"><button id="clearAllProductsBtn" class="danger">全商品をクリア</button></div><label for="restore">バックアップから復元</label><input id="restore" type="file" accept=".json,application/json"><p class="note">復元すると現在の登録データはバックアップ内容に置き換わります。</p>
 </section>
 <section class="card"><h2>④ 倉庫向け発注一覧</h2><p class="note">全店舗の発注数をJANコードごとに合算して表示します。</p><div id="summary" class="summary"></div><details class="fold-list"><summary>倉庫向け発注一覧（<span id="orderCount">0</span>種類）を表示</summary><div class="fold-list-content" id="orders"></div></details><div class="actions"><button id="orderCsvBtn" class="secondary">発注一覧を保存（CSV）</button><button id="clearOrdersBtn" class="danger">発注数をすべてクリア</button></div></section>
 <script>
 'use strict';
-const $=id=>document.getElementById(id), KEY='jan-stock-app-v1', MASTER_KEY='jan-stock-product-master-v1';
+const $=id=>document.getElementById(id), KEY='jan-stock-app-v1', MASTER_KEY='jan-stock-product-master-v1', INVENTORY_KEY='jan-stock-inventory-settings-v1';
 const STORES=['パシオ鷹尾','パシオ早鈴','Aコープ末吉','Aコープ牧之原','その他①','その他②','その他③'];
 const keyOf=(store,jan)=>store+'::'+jan;
-let items={},productMaster={},editingKey=null;
-try{
- const raw=JSON.parse(localStorage.getItem(KEY)||'{}');
- if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
-  for(const [k,v] of Object.entries(raw)){
-   if(!v||typeof v!=='object')continue;
-   let store=v.store,jan=v.jan;
-   if(!store||!jan){
-    const split=k.indexOf('::');
-    if(split>0){store=k.slice(0,split);jan=k.slice(split+2)}
-    else {store='未設定';jan=k}
-   }
-   jan=String(jan).replace(/\D/g,'');
-   if(!jan)continue;
-   items[keyOf(store,jan)]={store,jan,name:String(v.name||''),stock:Math.max(0,Math.floor(Number(v.stock)||0)),order:Math.max(0,Math.floor(Number(v.order)||0))};
-  }
- }
-}catch(e){}
-// 商品マスタは店舗別の商品データとは別に保存する。旧データから初回だけ自動作成。
-try{
- const savedMaster=localStorage.getItem(MASTER_KEY);
- if(savedMaster===null){
-  for(const p of Object.values(items)){if(p.jan&&p.name)productMaster[p.jan]=p.name}
-  localStorage.setItem(MASTER_KEY,JSON.stringify(productMaster));
- }else{
-  const parsed=JSON.parse(savedMaster);
-  if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){
-   for(const [jan,name] of Object.entries(parsed)){const code=String(jan).replace(/\D/g,'');if(code&&String(name||'').trim())productMaster[code]=String(name).trim()}
-  }
- }
-}catch(e){}
+let items={},productMaster={},inventorySettings={},editingKey=null;
+try{const raw=JSON.parse(localStorage.getItem(KEY)||'{}');if(raw&&typeof raw==='object'&&!Array.isArray(raw)){for(const [k,v] of Object.entries(raw)){if(!v||typeof v!=='object')continue;let store=v.store,jan=v.jan;if(!store||!jan){const split=k.indexOf('::');if(split>0){store=k.slice(0,split);jan=k.slice(split+2)}else{store='未設定';jan=k}}jan=String(jan).replace(/\D/g,'');if(!jan)continue;items[keyOf(store,jan)]={store,jan,name:String(v.name||''),stock:Math.max(0,Math.floor(Number(v.stock)||0)),order:Math.max(0,Math.floor(Number(v.order)||0))}}}}catch(e){}
+try{const savedMaster=localStorage.getItem(MASTER_KEY);if(savedMaster===null){for(const p of Object.values(items)){if(p.jan&&p.name)productMaster[p.jan]=p.name}localStorage.setItem(MASTER_KEY,JSON.stringify(productMaster))}else{const parsed=JSON.parse(savedMaster);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){for(const [jan,name] of Object.entries(parsed)){const code=String(jan).replace(/\D/g,'');if(code&&String(name||'').trim())productMaster[code]=String(name).trim()}}}}catch(e){}
+try{const saved=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved)){for(const [jan,value] of Object.entries(saved)){const code=String(jan).replace(/\D/g,'');if(code&&value===false)inventorySettings[code]=false}}}catch(e){}
 let scanner=null,running=false,locked=false,scanTarget='product',cameraTrack=null,torchOn=false;
 const digits=s=>String(s||'').replace(/\D/g,'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(id,s)=>$(id).textContent=s;
-function validJan(code){
- if(!/^(?:\d{8}|\d{13})$/.test(code))return false;
- const body=code.slice(0,-1);let sum=0;
- for(let i=0;i<body.length;i++){const weight=((body.length-1-i)%2===0)?3:1;sum+=Number(body[i])*weight}
- return (10-sum%10)%10===Number(code.slice(-1));
-}
+function validJan(code){if(!/^(?:\d{8}|\d{13})$/.test(code))return false;const body=code.slice(0,-1);let sum=0;for(let i=0;i<body.length;i++){const weight=((body.length-1-i)%2===0)?3:1;sum+=Number(body[i])*weight}return (10-sum%10)%10===Number(code.slice(-1))}
 function saveAll(){localStorage.setItem(KEY,JSON.stringify(items));render()}
 function saveMaster(){localStorage.setItem(MASTER_KEY,JSON.stringify(productMaster))}
+function saveInventorySettings(){localStorage.setItem(INVENTORY_KEY,JSON.stringify(inventorySettings))}
+function isInventoryManaged(jan){return inventorySettings[String(jan)]!==false}
+function setStockVisibility(jan){const show=!jan||isInventoryManaged(jan);$('stockFieldWrap').hidden=!show;$('stockGrid').classList.toggle('stock-off',!show)}
 function updateMaster(jan,name){if(jan&&name){productMaster[jan]=name;saveMaster();renderMaster()}}
 function hideNameSuggestions(){$('nameSuggestions').classList.remove('show');$('nameSuggestions').innerHTML=''}
-function updateNameSuggestions(){
- const q=$('name').value.trim().toLocaleLowerCase('ja');
- if(!q){hideNameSuggestions();return}
- const candidates=Object.entries(productMaster).map(([jan,name])=>({name:String(name||'').trim(),jan:String(jan)})).filter(p=>p.name&&p.jan);
- const starts=candidates.filter(p=>p.name.toLocaleLowerCase('ja').startsWith(q));
- const contains=candidates.filter(p=>!p.name.toLocaleLowerCase('ja').startsWith(q)&&p.name.toLocaleLowerCase('ja').includes(q));
- const matches=[...starts,...contains].slice(0,7);
- if(!matches.length){hideNameSuggestions();return}
- $('nameSuggestions').innerHTML=matches.map(p=>`<button type="button" class="suggestion-item" data-name-suggestion="${esc(p.name)}" data-jan-suggestion="${esc(p.jan)}">${esc(p.name)}<small style="display:block;color:#66717c;margin-top:3px">JAN：${esc(p.jan)}</small></button>`).join('');
- $('nameSuggestions').classList.add('show');
-}
-function clearMasterForm(){$('masterJan').value='';$('masterName').value='';status('masterStatus','')}
-function saveMasterEntry(){
- const j=digits($('masterJan').value),n=$('masterName').value.trim();$('masterJan').value=j;
- if(!validJan(j))return status('masterStatus','正しい8桁または13桁のJANコードを入力してください');
- if(!n)return status('masterStatus','商品名を入力してください');
- updateMaster(j,n);renderMaster();status('masterStatus','商品マスターに登録しました。全店舗の予測変換で使えます');
-}
-function renderMaster(){
- const q=($('masterSearch')?.value||'').trim().toLocaleLowerCase('ja');
- const list=Object.entries(productMaster).filter(([jan,name])=>jan.includes(q)||String(name).toLocaleLowerCase('ja').includes(q)).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja'));
- if(!$('masterList'))return;
- $('masterCount').textContent=list.length;
- if(q)$('masterList').closest('details').open=true;
- $('masterList').innerHTML=list.length?list.map(([jan,name])=>`<div class="product"><strong>${esc(name)}</strong><div class="meta">JAN：${esc(jan)}</div><div class="product-actions"><button class="secondary" data-master-edit="${esc(jan)}">編集</button><button class="danger" data-master-del="${esc(jan)}">削除</button></div></div>`).join(''):'<div class="empty">商品マスターはまだありません</div>';
-}
-function lookup(){
- const j=digits($('jan').value);$('jan').value=j;
- if(!j){status('formStatus','JANコードを入力してください');return}
- if(!validJan(j)){status('formStatus','JANコードが正しくありません。8桁または13桁のコードを確認してください');return}
- const wanted=keyOf($('store').value,j);
- let found=items[wanted]?wanted:null;
- if(!found){const legacy=keyOf('未設定',j);if(items[legacy])found=legacy}
- const p=found?items[found]:null;editingKey=found;
- $('name').value=p?.name||'';$('stock').value=Number(p?.stock)||0;$('order').value=0;
- status('formStatus',p?`${p.store}の登録商品です。今回の追加発注数を入力してください`:'未登録の商品です。商品名を入力してください');
- hideNameSuggestions();
-}
+function updateNameSuggestions(){const q=$('name').value.trim().toLocaleLowerCase('ja');if(!q){hideNameSuggestions();return}const candidates=Object.entries(productMaster).map(([jan,name])=>({name:String(name||'').trim(),jan:String(jan)})).filter(p=>p.name&&p.jan);const starts=candidates.filter(p=>p.name.toLocaleLowerCase('ja').startsWith(q));const contains=candidates.filter(p=>!p.name.toLocaleLowerCase('ja').startsWith(q)&&p.name.toLocaleLowerCase('ja').includes(q));const matches=[...starts,...contains].slice(0,7);if(!matches.length){hideNameSuggestions();return}$('nameSuggestions').innerHTML=matches.map(p=>`<button type="button" class="suggestion-item" data-name-suggestion="${esc(p.name)}" data-jan-suggestion="${esc(p.jan)}">${esc(p.name)}<small style="display:block;color:#66717c;margin-top:3px">JAN：${esc(p.jan)}</small></button>`).join('');$('nameSuggestions').classList.add('show')}
+function clearMasterForm(){$('masterJan').value='';$('masterName').value='';$('masterInventory').checked=true;status('masterStatus','')}
+function saveMasterEntry(){const j=digits($('masterJan').value),n=$('masterName').value.trim();$('masterJan').value=j;if(!validJan(j))return status('masterStatus','正しい8桁または13桁のJANコードを入力してください');if(!n)return status('masterStatus','商品名を入力してください');if($('masterInventory').checked)delete inventorySettings[j];else inventorySettings[j]=false;saveInventorySettings();updateMaster(j,n);renderMaster();if($('jan').value===j)setStockVisibility(j);status('masterStatus','商品マスターに登録しました。在庫管理設定も保存しました')}
+function renderMaster(){const q=($('masterSearch')?.value||'').trim().toLocaleLowerCase('ja');const list=Object.entries(productMaster).filter(([jan,name])=>jan.includes(q)||String(name).toLocaleLowerCase('ja').includes(q)).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja'));if(!$('masterList'))return;$('masterCount').textContent=list.length;if(q)$('masterList').closest('details').open=true;$('masterList').innerHTML=list.length?list.map(([jan,name])=>`<div class="product"><strong>${esc(name)}</strong><div class="meta">JAN：${esc(jan)}</div><label class="checkline"><input class="master-stock-toggle" type="checkbox" data-master-stock="${esc(jan)}" ${isInventoryManaged(jan)?'checked':''}> 在庫管理する</label><div class="product-actions"><button class="secondary" data-master-edit="${esc(jan)}">編集</button><button class="danger" data-master-del="${esc(jan)}">削除</button></div></div>`).join(''):'<div class="empty">商品マスターはまだありません</div>'}
+function lookup(){const j=digits($('jan').value);$('jan').value=j;if(!j){status('formStatus','JANコードを入力してください');return}if(!validJan(j)){status('formStatus','JANコードが正しくありません。8桁または13桁のコードを確認してください');return}const wanted=keyOf($('store').value,j);let found=items[wanted]?wanted:null;if(!found){const legacy=keyOf('未設定',j);if(items[legacy])found=legacy}const p=found?items[found]:null;editingKey=found;$('name').value=p?.name||productMaster[j]||'';$('stock').value=Number(p?.stock)||0;$('order').value=0;setStockVisibility(j);status('formStatus',p?`${p.store}の登録商品です。今回の追加発注数を入力してください`:productMaster[j]?'商品マスター登録済みです。店舗の商品情報を入力してください':'未登録の商品です。商品名を入力してください');hideNameSuggestions()}
 function beep(){try{const C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=1000;g.gain.value=.12;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.1);o.onended=()=>c.close()}catch(e){}}
-function setupCameraTools(){
- const video=$('reader').querySelector('video');
- cameraTrack=video&&video.srcObject&&video.srcObject.getVideoTracks?video.srcObject.getVideoTracks()[0]:null;
- torchOn=false;
- const torch=$('torchBtn'),focus=$('focusBtn'),zoomWrap=$('zoomWrap');
- torch.hidden=true;focus.hidden=true;zoomWrap.hidden=true;$('cameraTools').hidden=false;
- if(!cameraTrack)return;
- let caps={};try{caps=cameraTrack.getCapabilities?cameraTrack.getCapabilities():{}}catch(e){}
- if(caps.torch===true){torch.hidden=false;torch.textContent='ライトを点灯'}
- if(caps.focusMode&&Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))focus.hidden=false;
- if(caps.zoom&&Number.isFinite(caps.zoom.min)&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min){
-  const range=$('zoomRange'),settings=cameraTrack.getSettings?cameraTrack.getSettings():{};
-  range.min=String(caps.zoom.min);range.max=String(caps.zoom.max);range.step=String(caps.zoom.step||0.1);
-  range.value=String(Math.min(caps.zoom.max,Math.max(caps.zoom.min,settings.zoom||caps.zoom.min)));
-  $('zoomValue').textContent=Number(range.value).toFixed(1)+'x';zoomWrap.hidden=false;
- }
-}
-async function setCameraZoom(){
- if(!cameraTrack)return;
- const value=Number($('zoomRange').value);
- try{await cameraTrack.applyConstraints({advanced:[{zoom:value}]});$('zoomValue').textContent=value.toFixed(1)+'x'}
- catch(e){status('scanStatus','このカメラではズームを変更できません')}
-}
-async function toggleTorch(){
- if(!cameraTrack)return;
- try{torchOn=!torchOn;await cameraTrack.applyConstraints({advanced:[{torch:torchOn}]});$('torchBtn').textContent=torchOn?'ライトを消す':'ライトを点灯'}
- catch(e){torchOn=false;status('scanStatus','このカメラではライトを操作できません')}
-}
-async function setContinuousFocus(){
- if(!cameraTrack)return;
- try{await cameraTrack.applyConstraints({advanced:[{focusMode:'continuous'}]});status('scanStatus','オートフォーカスを設定しました。バーコードから少し距離を取ってお試しください')}
- catch(e){status('scanStatus','このカメラではフォーカス設定を変更できません。カメラの自動調整をご利用ください')}
-}
-async function startScan(){
- if(!window.Html5Qrcode){status('scanStatus','スキャン機能を読み込めません。JANを直接入力してください');return}
- $('reader').hidden=false;
- if(!scanner)scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8]});
- try{
-  if(running){locked=false;scanner.resume()}
-  else{
-   await scanner.start({facingMode:'environment'},{fps:20,qrbox:(viewfinderWidth,viewfinderHeight)=>({width:Math.max(220,Math.min(440,Math.floor(viewfinderWidth*0.92))),height:Math.max(120,Math.min(190,Math.floor(viewfinderHeight*0.32)))}),videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},text=>{
-    if(locked)return;const code=digits(text);if(!code)return;
-    if(!validJan(code)){status('scanStatus','JANコードとして確認できませんでした。バーコード全体を枠に合わせてください');return}
-    locked=true;beep();
-    if(scanTarget==='master'){
-     $('masterJan').value=code;$('masterName').value=productMaster[code]||'';
-     status('masterStatus',productMaster[code]?'登録済みマスターです。商品名を確認して更新できます':'JANを読み取りました。商品名を入力してマスター登録してください');
-     $('masterName').focus();
-    }else{$('jan').value=code;lookup();status('scanStatus','読み取りました：'+code+' ／ 店舗と商品情報を確認してください')}
-    try{scanner.pause(true)}catch(e){}
-    $('nextBtn').disabled=false;$('closeBtn').disabled=false;
-   },()=>{});
-   running=true;locked=false;setupCameraTools();
-  }
-  $('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','カメラ起動中。バーコード全体を枠に合わせてください');
- }catch(e){status('scanStatus','カメラを起動できません。カメラの許可とHTTPS接続を確認してください');$('reader').hidden=true;$('cameraTools').hidden=true}
-}
+function setupCameraTools(){const video=$('reader').querySelector('video');cameraTrack=video&&video.srcObject&&video.srcObject.getVideoTracks?video.srcObject.getVideoTracks()[0]:null;torchOn=false;const torch=$('torchBtn'),focus=$('focusBtn'),zoomWrap=$('zoomWrap');torch.hidden=true;focus.hidden=true;zoomWrap.hidden=true;$('cameraTools').hidden=false;if(!cameraTrack)return;let caps={};try{caps=cameraTrack.getCapabilities?cameraTrack.getCapabilities():{}}catch(e){}if(caps.torch===true){torch.hidden=false;torch.textContent='ライトを点灯'}if(caps.focusMode&&Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))focus.hidden=false;if(caps.zoom&&Number.isFinite(caps.zoom.min)&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min){const range=$('zoomRange'),settings=cameraTrack.getSettings?cameraTrack.getSettings():{};range.min=String(caps.zoom.min);range.max=String(caps.zoom.max);range.step=String(caps.zoom.step||0.1);range.value=String(Math.min(caps.zoom.max,Math.max(caps.zoom.min,settings.zoom||caps.zoom.min)));$('zoomValue').textContent=Number(range.value).toFixed(1)+'x';zoomWrap.hidden=false}}
+async function setCameraZoom(){if(!cameraTrack)return;const value=Number($('zoomRange').value);try{await cameraTrack.applyConstraints({advanced:[{zoom:value}]});$('zoomValue').textContent=value.toFixed(1)+'x'}catch(e){status('scanStatus','このカメラではズームを変更できません')}}
+async function toggleTorch(){if(!cameraTrack)return;try{torchOn=!torchOn;await cameraTrack.applyConstraints({advanced:[{torch:torchOn}]});$('torchBtn').textContent=torchOn?'ライトを消す':'ライトを点灯'}catch(e){torchOn=false;status('scanStatus','このカメラではライトを操作できません')}}
+async function setContinuousFocus(){if(!cameraTrack)return;try{await cameraTrack.applyConstraints({advanced:[{focusMode:'continuous'}]});status('scanStatus','オートフォーカスを設定しました。バーコードから少し距離を取ってお試しください')}catch(e){status('scanStatus','このカメラではフォーカス設定を変更できません。カメラの自動調整をご利用ください')}}
+async function startScan(){if(!window.Html5Qrcode){status('scanStatus','スキャン機能を読み込めません。JANを直接入力してください');return}$('reader').hidden=false;if(!scanner)scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8]});try{if(running){locked=false;scanner.resume()}else{await scanner.start({facingMode:'environment'},{fps:20,qrbox:(viewfinderWidth,viewfinderHeight)=>({width:Math.max(220,Math.min(440,Math.floor(viewfinderWidth*.92))),height:Math.max(120,Math.min(190,Math.floor(viewfinderHeight*.32)))}),videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},text=>{if(locked)return;const code=digits(text);if(!code)return;if(!validJan(code)){status('scanStatus','JANコードとして確認できませんでした。バーコード全体を枠に合わせてください');return}locked=true;beep();if(scanTarget==='master'){$('masterJan').value=code;$('masterName').value=productMaster[code]||'';$('masterInventory').checked=isInventoryManaged(code);status('masterStatus',productMaster[code]?'登録済みマスターです。商品名と在庫管理設定を確認して更新できます':'JANを読み取りました。商品名と在庫管理設定を入力してマスター登録してください');$('masterName').focus()}else{$('jan').value=code;lookup();status('scanStatus','読み取りました：'+code+' ／ 店舗と商品情報を確認してください')}try{scanner.pause(true)}catch(e){}$('nextBtn').disabled=false;$('closeBtn').disabled=false},()=>{});running=true;locked=false;setupCameraTools()}$('nextBtn').disabled=false;$('closeBtn').disabled=false;status('scanStatus','カメラ起動中。バーコード全体を枠に合わせてください')}catch(e){status('scanStatus','カメラを起動できません。カメラの許可とHTTPS接続を確認してください');$('reader').hidden=true;$('cameraTools').hidden=true}}
 async function closeScan(){if(scanner&&running){try{await scanner.stop()}catch(e){}running=false}locked=false;cameraTrack=null;$('reader').hidden=true;$('cameraTools').hidden=true;$('nextBtn').disabled=true;$('closeBtn').disabled=true;status('scanStatus','カメラを閉じました')}
-function clearForm(){editingKey=null;$('jan').value='';$('name').value='';$('stock').value=0;$('order').value=0;status('formStatus','')}
-function saveProduct(){
- const j=digits($('jan').value),store=$('store').value,n=$('name').value.trim(),s=Number($('stock').value),o=Number($('order').value);
- if(!validJan(j))return status('formStatus','正しい8桁または13桁のJANコードを入力してください');
- if(!n)return status('formStatus','商品名を入力してください');
- if(!Number.isFinite(s)||s<0||!Number.isFinite(o)||o<0||!Number.isInteger(s)||!Number.isInteger(o))return status('formStatus','在庫数と発注数は0以上の整数で入力してください');
- const target=keyOf(store,j),source=editingKey&&items[editingKey]?items[editingKey]:null;
- const migratingLegacy=!!(source&&editingKey===keyOf('未設定',j)&&!items[target]);
- const oldOrder=Number(items[target]?.order??(migratingLegacy?source.order:0))||0;
- // 店舗を切り替えても、別店舗の同じJAN商品は削除しない。未設定データだけ移行する。
- if(migratingLegacy)delete items[editingKey];
- items[target]={store,jan:j,name:n,stock:s,order:oldOrder+o};editingKey=target;
- updateMaster(j,n);saveAll();hideNameSuggestions();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');
- if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}
-}
-function render(){
- const q=$('search').value.trim().toLowerCase(),filter=$('storeFilter').value;
- const list=Object.entries(items).filter(([k,p])=>(filter==='すべて'||p.store===filter)&&(p.jan.includes(q)||String(p.name||'').toLowerCase().includes(q))).sort((a,b)=>a[1].store.localeCompare(b[1].store,'ja')||String(a[1].name).localeCompare(String(b[1].name),'ja'));
- $('productCount').textContent=list.length;
- if(q||filter!=='すべて')$('products').closest('details').open=true;
- $('products').innerHTML=list.length?list.map(([k,p])=>`<div class="product"><span class="store-tag">${esc(p.store)}</span><strong>${esc(p.name)}</strong><div class="meta">JAN：${esc(p.jan)}<br>在庫：${Number(p.stock)||0} ／ 累計発注：${Number(p.order)||0}</div><div class="product-actions"><button class="secondary" data-edit="${esc(k)}">編集</button><button class="danger" data-del="${esc(k)}">削除</button></div></div>`).join(''):'<div class="empty">登録商品はありません</div>';
- const groups={};for(const p of Object.values(items)){const qty=Math.max(0,Math.floor(Number(p.order)||0));if(!qty)continue;if(!groups[p.jan])groups[p.jan]={jan:p.jan,name:p.name||'',total:0,stores:[]};groups[p.jan].total+=qty;groups[p.jan].stores.push({store:p.store,qty})}
- const ord=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name,'ja'));
- $('orderCount').textContent=ord.length;
- $('orders').innerHTML=ord.length?ord.map(p=>`<div class="product"><strong>${esc(p.name)}</strong><div class="meta">JAN：${esc(p.jan)}<br>${p.stores.sort((a,b)=>a.store.localeCompare(b.store,'ja')).map(x=>`${esc(x.store)}：${x.qty}個`).join('<br>')}<br><b>全店舗合計：${p.total}個</b></div></div>`).join(''):'<div class="empty">発注商品はありません</div>';
- $('summary').textContent=`合計商品数：${ord.length}種類 ／ 全店舗合計発注数：${ord.reduce((a,p)=>a+p.total,0)}個`;
-}
+function clearForm(){editingKey=null;$('jan').value='';$('name').value='';$('stock').value=0;$('order').value=0;setStockVisibility('');status('formStatus','')}
+function saveProduct(){const j=digits($('jan').value),store=$('store').value,n=$('name').value.trim(),s=Number($('stock').value),o=Number($('order').value),manage=isInventoryManaged(j);if(!validJan(j))return status('formStatus','正しい8桁または13桁のJANコードを入力してください');if(!n)return status('formStatus','商品名を入力してください');if((manage&&(!Number.isFinite(s)||s<0||!Number.isInteger(s)))||!Number.isFinite(o)||o<0||!Number.isInteger(o))return status('formStatus','在庫数と発注数は0以上の整数で入力してください');const target=keyOf(store,j),source=editingKey&&items[editingKey]?items[editingKey]:null,migratingLegacy=!!(source&&editingKey===keyOf('未設定',j)&&!items[target]),oldOrder=Number(items[target]?.order??(migratingLegacy?source.order:0))||0;const oldStock=Number(items[target]?.stock??(migratingLegacy?source.stock:0))||0;if(migratingLegacy)delete items[editingKey];items[target]={store,jan:j,name:n,stock:manage?s:oldStock,order:oldOrder+o};editingKey=target;updateMaster(j,n);saveAll();hideNameSuggestions();status('formStatus','保存しました。店舗別に登録し、発注数を加算しました');if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次の商品を読み取れます')}}
+function render(){const q=$('search').value.trim().toLowerCase(),filter=$('storeFilter').value;const list=Object.entries(items).filter(([k,p])=>(filter==='すべて'||p.store===filter)&&(p.jan.includes(q)||String(p.name||'').toLowerCase().includes(q))).sort((a,b)=>a[1].store.localeCompare(b[1].store,'ja')||String(a[1].name).localeCompare(String(b[1].name),'ja'));$('productCount').textContent=list.length;if(q||filter!=='すべて')$('products').closest('details').open=true;$('products').innerHTML=list.length?list.map(([k,p])=>`<div class="product"><span class="store-tag">${esc(p.store)}</span><strong>${esc(p.name)}</strong><div class="meta">JAN：${esc(p.jan)}${isInventoryManaged(p.jan)?`<br>在庫：${Number(p.stock)||0}`:''}<br>累計発注：${Number(p.order)||0}</div><div class="product-actions"><button class="secondary" data-edit="${esc(k)}">編集</button><button class="danger" data-del="${esc(k)}">削除</button></div></div>`).join(''):'<div class="empty">登録商品はありません</div>';const groups={};for(const p of Object.values(items)){const qty=Math.max(0,Math.floor(Number(p.order)||0));if(!qty)continue;if(!groups[p.jan])groups[p.jan]={jan:p.jan,name:p.name||'',total:0,stores:[]};groups[p.jan].total+=qty;groups[p.jan].stores.push({store:p.store,qty})}const ord=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name,'ja'));$('orderCount').textContent=ord.length;$('orders').innerHTML=ord.length?ord.map(p=>`<div class="product"><strong>${esc(p.name)}</strong><div class="meta">JAN：${esc(p.jan)}<br>${p.stores.sort((a,b)=>a.store.localeCompare(b.store,'ja')).map(x=>`${esc(x.store)}：${x.qty}個`).join('<br>')}<br><b>全店舗合計：${p.total}個</b></div></div>`).join(''):'<div class="empty">発注商品はありません</div>';$('summary').textContent=`合計商品数：${ord.length}種類 ／ 全店舗合計発注数：${ord.reduce((a,p)=>a+p.total,0)}個`}
 function download(name,data,type){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([data],{type}));a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $('name').addEventListener('input',updateNameSuggestions);
-$('nameSuggestions').onclick=e=>{
- const b=e.target.closest('[data-name-suggestion]');if(!b)return;
- const jan=b.dataset.janSuggestion,name=b.dataset.nameSuggestion;
- $('name').value=name;$('jan').value=jan;hideNameSuggestions();
- const target=keyOf($('store').value,jan),legacy=keyOf('未設定',jan);
- if(items[target]||items[legacy]){lookup();hideNameSuggestions()}
- else{editingKey=null;$('stock').value=0;$('order').value=0;status('formStatus','商品名とJANコードを入力しました。今回の店舗の商品として登録できます')}
-};
-$('name').addEventListener('focus',updateNameSuggestions);
-$('masterSaveBtn').onclick=saveMasterEntry;
-$('masterClearBtn').onclick=clearMasterForm;
-$('masterSearch').oninput=renderMaster;
-$('masterJan').onchange=()=>{const j=digits($('masterJan').value);$('masterJan').value=j;if(validJan(j)&&productMaster[j])$('masterName').value=productMaster[j]};
+$('nameSuggestions').onclick=e=>{const b=e.target.closest('[data-name-suggestion]');if(!b)return;const jan=b.dataset.janSuggestion,name=b.dataset.nameSuggestion;$('name').value=name;$('jan').value=jan;hideNameSuggestions();const target=keyOf($('store').value,jan),legacy=keyOf('未設定',jan);if(items[target]||items[legacy]){lookup();hideNameSuggestions()}else{editingKey=null;$('stock').value=0;$('order').value=0;setStockVisibility(jan);status('formStatus','商品名とJANコードを入力しました。今回の店舗の商品として登録できます')}};
+$('name').addEventListener('focus',updateNameSuggestions);$('masterSaveBtn').onclick=saveMasterEntry;$('masterClearBtn').onclick=clearMasterForm;$('masterSearch').oninput=renderMaster;
+$('masterJan').onchange=()=>{const j=digits($('masterJan').value);$('masterJan').value=j;if(validJan(j)){if(productMaster[j])$('masterName').value=productMaster[j];$('masterInventory').checked=isInventoryManaged(j)}};
 $('masterScanBtn').onclick=()=>{scanTarget='master';startScan()};$('torchBtn').onclick=toggleTorch;$('focusBtn').onclick=setContinuousFocus;$('zoomRange').onchange=setCameraZoom;
-$('masterList').onclick=e=>{
- const ed=e.target.closest('[data-master-edit]'),del=e.target.closest('[data-master-del]');
- if(ed){const j=ed.dataset.masterEdit;$('masterJan').value=j;$('masterName').value=productMaster[j]||'';status('masterStatus','商品名を修正して「マスターに登録・更新」を押してください');$('masterName').focus()}
- if(del){const j=del.dataset.masterDel;if(confirm('この商品を商品マスターから削除しますか？店舗別の商品データは削除されません。')){delete productMaster[j];saveMaster();renderMaster();status('masterStatus','商品マスターから削除しました')}}
-};
-$('store').addEventListener('change',()=>{
- const source=editingKey&&items[editingKey]?items[editingKey]:null;
- // 別店舗へ切り替えたら、元店舗の商品を編集し続けない。未設定データの移行だけは維持する。
- if(source&&source.store!=='未設定'&&source.store!==$('store').value){editingKey=null;status('formStatus','登録先店舗を変更しました。元の店舗の商品は残し、選択中の店舗に登録します。');}
-});
-$('scanBtn').onclick=()=>{scanTarget='product';startScan()};$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};
-$('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=()=>{clearForm();hideNameSuggestions()};$('search').oninput=render;$('storeFilter').onchange=render;
-$('products').onclick=e=>{
- const ed=e.target.closest('[data-edit]'),del=e.target.closest('[data-del]');
- if(ed){const k=ed.dataset.edit,p=items[k];if(p){editingKey=k;if(![...$('store').options].some(opt=>opt.value===p.store)){const opt=document.createElement('option');opt.textContent=p.store;opt.value=p.store;$('store').appendChild(opt)}$('store').value=p.store;$('jan').value=p.jan;$('name').value=p.name;$('stock').value=p.stock;$('order').value=0;status('formStatus','登録内容を編集できます。追加発注数だけ入力してください');window.scrollTo({top:0,behavior:'smooth'})}}
- if(del){const k=del.dataset.del;if(confirm('この店舗の商品を削除しますか？')){delete items[k];saveAll();if(editingKey===k)clearForm()}}
-};
+$('masterList').onclick=e=>{const ed=e.target.closest('[data-master-edit]'),del=e.target.closest('[data-master-del]');if(ed){const j=ed.dataset.masterEdit;$('masterJan').value=j;$('masterName').value=productMaster[j]||'';$('masterInventory').checked=isInventoryManaged(j);status('masterStatus','商品名と在庫管理設定を修正して「マスターに登録・更新」を押してください');$('masterName').focus()}if(del){const j=del.dataset.masterDel;if(confirm('この商品を商品マスターから削除しますか？店舗別の商品データは削除されません。')){delete productMaster[j];delete inventorySettings[j];saveMaster();saveInventorySettings();renderMaster();render();if($('jan').value===j)setStockVisibility(j);status('masterStatus','商品マスターから削除しました')}}};
+$('masterList').onchange=e=>{const c=e.target.closest('[data-master-stock]');if(!c)return;const j=c.dataset.masterStock;if(c.checked)delete inventorySettings[j];else inventorySettings[j]=false;saveInventorySettings();renderMaster();render();if($('jan').value===j)setStockVisibility(j)};
+$('store').addEventListener('change',()=>{const source=editingKey&&items[editingKey]?items[editingKey]:null;if(source&&source.store!=='未設定'&&source.store!==$('store').value){editingKey=null;status('formStatus','登録先店舗を変更しました。元の店舗の商品は残し、選択中の店舗に登録します。')}});
+$('scanBtn').onclick=()=>{scanTarget='product';startScan()};$('nextBtn').onclick=()=>{if(scanner&&running){locked=false;try{scanner.resume()}catch(e){}status('scanStatus','次のJANコードをかざしてください')}};$('closeBtn').onclick=closeScan;$('lookupBtn').onclick=lookup;$('jan').onchange=lookup;$('saveBtn').onclick=saveProduct;$('clearBtn').onclick=()=>{clearForm();hideNameSuggestions()};$('search').oninput=render;$('storeFilter').onchange=render;
+$('products').onclick=e=>{const ed=e.target.closest('[data-edit]'),del=e.target.closest('[data-del]');if(ed){const k=ed.dataset.edit,p=items[k];if(p){editingKey=k;if(![...$('store').options].some(opt=>opt.value===p.store)){const opt=document.createElement('option');opt.textContent=p.store;opt.value=p.store;$('store').appendChild(opt)}$('store').value=p.store;$('jan').value=p.jan;$('name').value=p.name;$('stock').value=p.stock;$('order').value=0;setStockVisibility(p.jan);status('formStatus','登録内容を編集できます。追加発注数だけ入力してください');window.scrollTo({top:0,behavior:'smooth'})}}if(del){const k=del.dataset.del;if(confirm('この店舗の商品を削除しますか？')){delete items[k];saveAll();if(editingKey===k)clearForm()}}};
 $('csvBtn').onclick=()=>{const rows=[['店舗','JANコード','商品名','在庫数','累計発注数'],...Object.values(items).map(p=>[p.store,p.jan,p.name,p.stock||0,p.order||0])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('jan-stock-by-store.csv',csv,'text/csv;charset=utf-8')};
 $('orderCsvBtn').onclick=()=>{const rows=[['JANコード','商品名','店舗','店舗別発注数','JAN別全店舗合計'],...Object.values(items).filter(p=>Number(p.order)>0).map(p=>[p.jan,p.name,p.store,p.order,Object.values(items).filter(x=>x.jan===p.jan).reduce((a,x)=>a+(Number(x.order)||0),0)])];if(rows.length===1)return alert('保存する発注商品がありません');const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('warehouse-order.csv',csv,'text/csv;charset=utf-8')};
 $('clearOrdersBtn').onclick=()=>{if(!confirm('全店舗の発注数を0にします。商品名・在庫数・登録情報は残ります。よろしいですか？'))return;for(const p of Object.values(items))p.order=0;saveAll();status('formStatus','全店舗の発注数をクリアしました')};
 $('clearAllProductsBtn').onclick=()=>{const count=Object.keys(items).length;if(!count)return alert('削除する商品がありません');if(!confirm(`全店舗の登録商品${count}件を削除します。在庫数・発注数・商品情報もすべて消え、元に戻せません。先にバックアップを保存しましたか？`))return;items={};editingKey=null;clearForm();saveAll();status('formStatus','全店舗の商品をすべて削除しました')};
-$('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify({version:2,items,productMaster},null,2),'application/json');
-$('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{
- const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;
- const sourceItems=(d.version===2&&d.items&&typeof d.items==='object')?d.items:d;
- if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){
-  const clean={};for(const [k,p] of Object.entries(sourceItems)){if(!p||typeof p!=='object')continue;let store=p.store,jan=p.jan;if(!store||!jan){const i=k.indexOf('::');if(i>0){store=k.slice(0,i);jan=k.slice(i+2)}else{store='未設定';jan=k}}jan=digits(jan);if(jan)clean[keyOf(store,jan)]={store,jan,name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}
-  items=clean;
-  if(d.version===2&&d.productMaster&&typeof d.productMaster==='object'&&!Array.isArray(d.productMaster)){for(const [jan,name] of Object.entries(d.productMaster)){const code=digits(jan);if(code&&String(name||'').trim())productMaster[code]=String(name).trim()}}
-  for(const p of Object.values(items)){if(p.jan&&p.name)productMaster[p.jan]=p.name}
-  saveMaster();editingKey=null;saveAll();status('formStatus','バックアップから復元しました（商品マスタも引き継ぎました）')
- }
- }catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
-render();renderMaster();
-if ('serviceWorker' in navigator) {
- window.addEventListener('load', () => {
-  navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('PWA登録エラー:', err));
- });
-}
+$('backupBtn').onclick=()=>download('jan-stock-backup.json',JSON.stringify({version:3,items,productMaster,inventorySettings},null,2),'application/json');
+$('restore').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d||typeof d!=='object'||Array.isArray(d))throw 0;const sourceItems=(d.version>=2&&d.items&&typeof d.items==='object')?d.items:d;if(confirm('現在の登録データをバックアップ内容に置き換えますか？')){const clean={};for(const [k,p] of Object.entries(sourceItems)){if(!p||typeof p!=='object')continue;let store=p.store,jan=p.jan;if(!store||!jan){const i=k.indexOf('::');if(i>0){store=k.slice(0,i);jan=k.slice(i+2)}else{store='未設定';jan=k}}jan=digits(jan);if(jan)clean[keyOf(store,jan)]={store,jan,name:String(p.name||''),stock:Math.max(0,Math.floor(Number(p.stock)||0)),order:Math.max(0,Math.floor(Number(p.order)||0))}}items=clean;if(d.productMaster&&typeof d.productMaster==='object'&&!Array.isArray(d.productMaster)){productMaster={};for(const [jan,name] of Object.entries(d.productMaster)){const code=digits(jan);if(code&&String(name||'').trim())productMaster[code]=String(name).trim()}}for(const p of Object.values(items)){if(p.jan&&p.name)productMaster[p.jan]=p.name}inventorySettings={};if(d.inventorySettings&&typeof d.inventorySettings==='object'&&!Array.isArray(d.inventorySettings)){for(const [jan,value] of Object.entries(d.inventorySettings)){const code=digits(jan);if(code&&value===false)inventorySettings[code]=false}}saveMaster();saveInventorySettings();editingKey=null;saveAll();setStockVisibility('');renderMaster();status('formStatus','バックアップから復元しました（商品マスタ・在庫管理設定も引き継ぎました）')}}catch(e){alert('バックアップファイルを読み込めませんでした')}finally{e.target.value=''}};
+render();renderMaster();setStockVisibility('');
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./service-worker.js').catch(err=>console.log('PWA登録エラー:',err))})}
 </script>
 </body></html>
