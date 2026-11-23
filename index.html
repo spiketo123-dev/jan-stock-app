@@ -39,7 +39,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <section class="card">
 <h2>商品マスター登録（全店舗共通）</h2><p class="note">店舗への発注登録とは別に、商品名とJANコードだけを先に登録できます。ここで登録した商品は全店舗の予測変換に表示されます。在庫管理する商品だけチェックを入れてください。</p>
 <label for="masterJan">JANコード</label><div class="actions" style="margin-top:0"><input id="masterJan" inputmode="numeric" placeholder="JANコードを入力"><button id="masterScanBtn" class="secondary">カメラで読み取る</button></div>
-<label for="masterName">商品名</label><input id="masterName" placeholder="商品名を入力"><label for="masterMaker">メーカー名</label><input id="masterMaker" placeholder="メーカー名を入力（例：明治、森永など）"><label class="checkline"><input id="masterInventory" type="checkbox" checked> 在庫管理する</label>
+<label for="masterMaker">メーカー名</label><input id="masterMaker" placeholder="メーカー名を入力（例：明治、森永など）"><label for="masterName">商品名</label><input id="masterName" placeholder="商品名を入力"><label class="checkline"><input id="masterInventory" type="checkbox" checked> 在庫管理する</label>
 <div class="actions"><button id="masterSaveBtn">マスターに登録・更新</button><button id="masterClearBtn" class="secondary">入力をクリア</button></div><div id="masterStatus" class="status"></div>
 <label for="masterSearch">登録済みマスターを検索</label><input id="masterSearch" placeholder="商品名・JANコードで検索"><details class="fold-list"><summary>登録済みマスター一覧（<span id="masterCount">0</span>件）を表示</summary><div class="fold-list-content" id="masterList"></div></details>
 </section>
@@ -47,7 +47,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 <h2>② 商品登録・入力</h2><label for="store">登録する店舗</label><select id="store"><option>パシオ鷹尾</option><option>パシオ早鈴</option><option>Aコープ末吉</option><option>Aコープ牧之原</option><option>その他①</option><option>その他②</option><option>その他③</option><option>自販機在庫</option></select>
 <label for="jan">JANコード</label><div class="actions" style="margin-top:0"><input id="jan" inputmode="numeric" placeholder="JANコードを入力"><button id="lookupBtn">検索</button></div>
 <label for="name">商品名</label><input id="name" placeholder="商品名を入力" autocomplete="off"><div id="nameSuggestions" class="suggestions" aria-label="商品名の候補"></div><p class="note">商品マスタに保存した商品名が入力候補に表示されます。商品一覧を全消去しても候補は残ります。</p>
-<div class="grid" id="stockGrid"><div id="stockFieldWrap"><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">現在の累計発注数（直接変更）</label><input id="order" type="number" min="0" step="1" value="0"></div><div><label for="addOrder">今回追加する発注数</label><input id="addOrder" type="number" min="0" step="1" value="0"></div></div>
+<div class="grid" id="stockGrid"><div id="stockFieldWrap"><label for="stock">在庫数</label><input id="stock" type="number" min="0" step="1" value="0"></div><div><label for="order">現在の累計発注数<br>（直接変更）</label><input id="order" type="number" min="0" step="1" value="0"></div><div><label for="addOrder">今回追加する発注数</label><input id="addOrder" type="number" min="0" step="1" value="0"></div></div>
 <div class="actions"><button id="saveBtn">登録・更新する</button><button id="clearBtn" class="secondary">入力をクリア</button></div><div id="formStatus" class="status"></div><p class="note">累計発注数を直接変更できます。今回追加する数を入力すると、累計に加算して保存します。</p>
 </section>
 <section class="card">
