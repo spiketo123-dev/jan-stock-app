@@ -32,7 +32,7 @@ button.secondary{background:#e9eef3;color:#263442}button.danger{background:#b832
 </head>
 <body>
 <h1>JAN在庫・発注アプリ</h1><p class="sub">商品登録・在庫管理・倉庫向け発注一覧</p>
-<div class="card menu-card"><label for="sectionMenu">表示するメニュー</label><select id="sectionMenu"><option value="section-2">② 商品登録・入力</option><option value="section-1">① JANコード読み取り</option><option value="section-3">③ 商品一覧</option><option value="section-4">④ 倉庫向け発注一覧</option><option value="section-master">商品マスター登録</option></select></div>
+<div class="card menu-card"><label for="sectionMenu">表示するメニュー</label><select id="sectionMenu"><option value="section-1">① JANコード読み取り</option><option value="section-2">② 商品登録・入力</option><option value="section-3">③ 商品一覧</option><option value="section-4">④ 倉庫向け発注一覧</option><option value="section-master">商品マスター登録</option></select></div>
 <section class="card app-section" id="section-1" hidden>
 <h2>① JANコード読み取り</h2><button id="scanBtn">カメラでJANをスキャン</button><div id="reader" hidden></div>
 <div id="cameraTools" class="camera-tools" hidden><div class="actions" style="margin-top:0"><button id="torchBtn" class="secondary" hidden>ライトを点灯</button><button id="focusBtn" class="secondary" hidden>オートフォーカス</button></div><div id="zoomWrap" hidden><label for="zoomRange">カメラのズーム：<span id="zoomValue">1.0x</span></label><input id="zoomRange" type="range" min="1" max="2" step="0.1" value="1"></div><p class="note">ライト・ズーム・フォーカスはiPhoneやブラウザの対応状況によって表示されない場合があります。</p></div>
